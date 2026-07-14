@@ -110,6 +110,8 @@ function Dashboard() {
           </div>
         </CardContent>
       </Card>
+
+      <AiInsightsPanel />
     </div>
   );
 }
