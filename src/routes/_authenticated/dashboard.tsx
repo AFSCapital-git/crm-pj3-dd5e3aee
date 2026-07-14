@@ -6,6 +6,7 @@ import { getDashboard } from "@/lib/dashboard.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UrgencyBadge, formatBRL, formatDate, statusProjetoLabel, tipoMarcoLabel } from "@/lib/labels";
 import { AlertTriangle, TrendingUp, FolderKanban, Percent } from "lucide-react";
+import { AiInsightsPanel } from "@/components/ai-insights-panel";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
