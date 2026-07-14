@@ -1,28 +1,19 @@
 ## O que está acontecendo
 
-Não é um bug do código. A proteção **HIBP (Have I Been Pwned)** está ativa no Lovable Cloud e bloqueou a senha que você tentou usar (`12345678` ou similar) porque ela aparece em vazamentos públicos conhecidos. A mensagem vem direto do backend de autenticação.
+Sua conta foi criada com sucesso, mas o Supabase Auth está exigindo **confirmação de e-mail** antes do primeiro login. Como esse é um CRM interno (uso da equipe da consultoria), a confirmação por e-mail só adiciona atrito sem valor de segurança.
 
-## Como corrigir
+## Correção
 
-Escolha **uma** das duas opções:
+Ativar **auto-confirmação de e-mail** no backend via `configure_auth` (`auto_confirm_email: true`). Efeito:
 
-### Opção A — Usar uma senha forte (recomendado)
-Simplesmente cadastre com uma senha que não seja trivial. Regras práticas:
-- 12+ caracteres
-- misture maiúsculas, minúsculas, números e símbolos
-- não use palavras de dicionário nem sequências (`123456`, `senha123`, `qwerty`, nome da empresa, etc.)
+- Contas novas ficam ativas imediatamente após "Cadastrar" — sem passar por caixa de entrada.
+- Sua conta atual (`romero.junior@afbrinvestimentos.com.br`) já existe mas está com `email_confirmed_at = null`. Rodo uma migration curta que confirma manualmente todos os usuários já cadastrados (`UPDATE auth.users SET email_confirmed_at = now() WHERE email_confirmed_at IS NULL`), para você conseguir entrar agora mesmo.
+- Mantenho HIBP ligado (proteção contra senhas vazadas) — só desligo a confirmação por e-mail.
 
-Exemplo de padrão aceito: `Gf!n3p@2026-Romero` (não use essa exata, invente a sua).
+## Passos
 
-Nenhuma alteração de código é necessária — é só cadastrar novamente com senha mais forte.
+1. `configure_auth` → `auto_confirm_email: true`, `password_hibp_enabled: true`, `disable_signup: false`, `external_anonymous_users_enabled: false`.
+2. Migration: confirmar manualmente os usuários existentes em `auth.users`.
+3. Você faz login normalmente em `/auth` com o e-mail e a senha já cadastrados.
 
-### Opção B — Desativar a verificação HIBP
-Se você prefere não ter esse bloqueio (ex.: ambiente interno controlado), eu desligo a checagem chamando `configure_auth` com `password_hibp_enabled: false`. Nenhum código muda; só a configuração do backend.
-
-Recomendo **manter ligado** (Opção A) já que é um CRM com dados de clientes e o custo é só escolher senha melhor.
-
-## Próximo passo
-
-Me diga qual opção você quer:
-- **A** — vou apenas confirmar e você tenta de novo com senha forte;
-- **B** — eu desativo a checagem HIBP agora.
+Nenhum código do app muda.
