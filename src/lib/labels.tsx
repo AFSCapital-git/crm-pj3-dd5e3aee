@@ -52,6 +52,7 @@ const tipoInteracaoLabels: Record<string, string> = {
   alteracao_cronograma: "Alteração de cronograma",
   aditivo_contratual: "Aditivo contratual",
   nota: "Nota",
+  documento: "Documento",
 };
 export function tipoInteracaoLabel(s: string) { return tipoInteracaoLabels[s] ?? s; }
 
