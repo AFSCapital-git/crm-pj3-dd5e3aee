@@ -33,20 +33,25 @@ import {
 } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2 } from "lucide-react";
-import { listEditais, upsertEdital, deleteEdital } from "@/lib/editais.functions";
+import { Plus, Pencil, Trash2, ChevronDown } from "lucide-react";
+import { upsertEdital, deleteEdital } from "@/lib/editais.functions";
 import { categoriaEditalLabel, formatBRL, formatDate } from "@/lib/labels";
+import { listEditaisPaginado } from "@/lib/pagination.functions";
+import { usePaginatedQuery } from "@/hooks/use-paginated-query";
 
 export const Route = createFileRoute("/_authenticated/editais")({
   component: EditaisPage,
 });
 
 function EditaisPage() {
-  const list = useServerFn(listEditais);
+  const listFn = useServerFn(listEditaisPaginado);
   const upsert = useServerFn(upsertEdital);
   const del = useServerFn(deleteEdital);
   const qc = useQueryClient();
-  const q = useQuery({ queryKey: ["editais"], queryFn: () => list() });
+  const { items, loadMore, hasMore, isLoadingMore, isLoading, error } = usePaginatedQuery(
+    ["editais-paginated"],
+    (cursor) => listFn({ data: { cursor, pageSize: 50 } }),
+  );
   const [editing, setEditing] = useState<Record<string, unknown> | null>(null);
   const [open, setOpen] = useState(false);
 
@@ -54,7 +59,7 @@ function EditaisPage() {
     mutationFn: (input: Record<string, unknown>) => upsert({ data: input }),
     onSuccess: () => {
       toast.success("Edital salvo");
-      qc.invalidateQueries({ queryKey: ["editais"] });
+      qc.invalidateQueries({ queryKey: ["editais-paginated"] });
       setOpen(false);
       setEditing(null);
     },
@@ -64,7 +69,7 @@ function EditaisPage() {
     mutationFn: (id: string) => del({ data: { id } }),
     onSuccess: () => {
       toast.success("Removido");
-      qc.invalidateQueries({ queryKey: ["editais"] });
+      qc.invalidateQueries({ queryKey: ["editais-paginated"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -107,71 +112,94 @@ function EditaisPage() {
       </div>
 
       <Card>
-        <CardContent className="pt-6">
-          {q.isLoading ? (
+        <CardHeader>
+          <CardTitle>
+            Catálogo{" "}
+            {items.length > 0 && <span className="text-sm font-normal">({items.length})</span>}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {isLoading ? (
             <p>Carregando…</p>
+          ) : error ? (
+            <p className="text-destructive">{error.message}</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Categoria</TableHead>
-                  <TableHead>Órgão</TableHead>
-                  <TableHead>Valor máximo</TableHead>
-                  <TableHead>Prazo submissão</TableHead>
-                  <TableHead>Ativo</TableHead>
-                  <TableHead />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {(q.data ?? []).map((e: Record<string, unknown>) => {
-                  const aberto = e.prazo_submissao && e.prazo_submissao >= today;
-                  return (
-                    <TableRow key={e.id as string}>
-                      <TableCell className="font-medium">{e.nome}</TableCell>
-                      <TableCell>{categoriaEditalLabel(e.categoria)}</TableCell>
-                      <TableCell>{e.orgao ?? "—"}</TableCell>
-                      <TableCell>{formatBRL(e.valor_maximo_edital)}</TableCell>
-                      <TableCell>
-                        {formatDate(e.prazo_submissao)}
-                        {aberto && (
-                          <Badge className="ml-2 bg-urgency-ok text-urgency-ok-fg border-transparent">
-                            Aberto
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>{e.ativo ? "Sim" : "Não"}</TableCell>
-                      <TableCell className="text-right space-x-1">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => {
-                            setEditing(e);
-                            setOpen(true);
-                          }}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => confirm("Remover?") && mDelete.mutate(e.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Categoria</TableHead>
+                    <TableHead>Órgão</TableHead>
+                    <TableHead>Valor máximo</TableHead>
+                    <TableHead>Prazo submissão</TableHead>
+                    <TableHead>Ativo</TableHead>
+                    <TableHead />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {items.map((e: Record<string, unknown>) => {
+                    const aberto = e.prazo_submissao && e.prazo_submissao >= today;
+                    return (
+                      <TableRow key={e.id as string}>
+                        <TableCell className="font-medium">{e.nome}</TableCell>
+                        <TableCell>{categoriaEditalLabel(e.categoria)}</TableCell>
+                        <TableCell>{e.orgao ?? "—"}</TableCell>
+                        <TableCell>{formatBRL(e.valor_maximo_edital)}</TableCell>
+                        <TableCell>
+                          {formatDate(e.prazo_submissao)}
+                          {aberto && (
+                            <Badge className="ml-2 bg-urgency-ok text-urgency-ok-fg border-transparent">
+                              Aberto
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>{e.ativo ? "Sim" : "Não"}</TableCell>
+                        <TableCell className="text-right space-x-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => {
+                              setEditing(e);
+                              setOpen(true);
+                            }}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => confirm("Remover?") && mDelete.mutate(e.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {items.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground">
+                        Nenhum edital cadastrado.
                       </TableCell>
                     </TableRow>
-                  );
-                })}
-                {q.data?.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground">
-                      Nenhum edital cadastrado.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                  )}
+                </TableBody>
+              </Table>
+              {hasMore && (
+                <div className="flex justify-center pt-4">
+                  <Button
+                    onClick={() => loadMore()}
+                    disabled={isLoadingMore}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    {isLoadingMore ? "Carregando…" : "Carregar mais"}
+                    <ChevronDown className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>

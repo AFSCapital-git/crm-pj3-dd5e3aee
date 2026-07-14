@@ -31,19 +31,24 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, FileText } from "lucide-react";
+import { Plus, Pencil, Trash2, FileText, ChevronDown } from "lucide-react";
 import { Link } from "@tanstack/react-router";
-import { listEmpresas, upsertEmpresa, deleteEmpresa } from "@/lib/empresas.functions";
+import { upsertEmpresa, deleteEmpresa } from "@/lib/empresas.functions";
 import { listUsuarios } from "@/lib/dashboard.functions";
+import { listEmpresasPaginado } from "@/lib/pagination.functions";
+import { usePaginatedQuery } from "@/hooks/use-paginated-query";
 
 export const Route = createFileRoute("/_authenticated/empresas")({
   component: EmpresasPage,
 });
 
 function EmpresasPage() {
-  const list = useServerFn(listEmpresas);
+  const listFn = useServerFn(listEmpresasPaginado);
   const usuarios = useServerFn(listUsuarios);
-  const q = useQuery({ queryKey: ["empresas"], queryFn: () => list() });
+  const { items, loadMore, hasMore, isLoadingMore, isLoading, error } = usePaginatedQuery(
+    ["empresas-paginated"],
+    (cursor) => listFn({ data: { cursor, pageSize: 50 } }),
+  );
   const qUsers = useQuery({ queryKey: ["usuarios"], queryFn: () => usuarios() });
   const qc = useQueryClient();
 
@@ -57,7 +62,7 @@ function EmpresasPage() {
     mutationFn: (input: Record<string, unknown>) => upsert({ data: input }),
     onSuccess: () => {
       toast.success("Empresa salva");
-      qc.invalidateQueries({ queryKey: ["empresas"] });
+      qc.invalidateQueries({ queryKey: ["empresas-paginated"] });
       setOpen(false);
       setEditing(null);
     },
@@ -67,7 +72,7 @@ function EmpresasPage() {
     mutationFn: (id: string) => del({ data: { id } }),
     onSuccess: () => {
       toast.success("Empresa removida");
-      qc.invalidateQueries({ queryKey: ["empresas"] });
+      qc.invalidateQueries({ queryKey: ["empresas-paginated"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -111,68 +116,88 @@ function EmpresasPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Lista</CardTitle>
+          <CardTitle>
+            Lista{" "}
+            {items.length > 0 && <span className="text-sm font-normal">({items.length})</span>}
+          </CardTitle>
         </CardHeader>
-        <CardContent>
-          {q.isLoading ? (
+        <CardContent className="space-y-4">
+          {isLoading ? (
             <p>Carregando…</p>
+          ) : error ? (
+            <p className="text-destructive">{error.message}</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Razão social</TableHead>
-                  <TableHead>CNPJ</TableHead>
-                  <TableHead>Porte</TableHead>
-                  <TableHead>Consultor</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {(q.data ?? []).map((e: Record<string, unknown>) => (
-                  <TableRow key={e.id as string}>
-                    <TableCell className="font-medium">{e.razao_social}</TableCell>
-                    <TableCell>{e.cnpj}</TableCell>
-                    <TableCell>{e.porte}</TableCell>
-                    <TableCell>{e.consultor?.nome ?? "—"}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{e.status}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right space-x-1">
-                      <Button asChild size="icon" variant="ghost" title="Abrir">
-                        <Link to="/empresas/$id" params={{ id: e.id as string }}>
-                          <FileText className="h-4 w-4" />
-                        </Link>
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => {
-                          setEditing(e);
-                          setOpen(true);
-                        }}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => confirm("Remover empresa?") && mDelete.mutate(e.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {q.data?.length === 0 && (
+            <>
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground">
-                      Nenhuma empresa cadastrada.
-                    </TableCell>
+                    <TableHead>Razão social</TableHead>
+                    <TableHead>CNPJ</TableHead>
+                    <TableHead>Porte</TableHead>
+                    <TableHead>Consultor</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead />
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {items.map((e: Record<string, unknown>) => (
+                    <TableRow key={e.id as string}>
+                      <TableCell className="font-medium">{e.razao_social}</TableCell>
+                      <TableCell>{e.cnpj}</TableCell>
+                      <TableCell>{e.porte}</TableCell>
+                      <TableCell>{e.consultor?.nome ?? "—"}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{e.status}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right space-x-1">
+                        <Button asChild size="icon" variant="ghost" title="Abrir">
+                          <Link to="/empresas/$id" params={{ id: e.id as string }}>
+                            <FileText className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => {
+                            setEditing(e);
+                            setOpen(true);
+                          }}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => confirm("Remover empresa?") && mDelete.mutate(e.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {items.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-muted-foreground">
+                        Nenhuma empresa cadastrada.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+              {hasMore && (
+                <div className="flex justify-center pt-4">
+                  <Button
+                    onClick={() => loadMore()}
+                    disabled={isLoadingMore}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    {isLoadingMore ? "Carregando…" : "Carregar mais"}
+                    <ChevronDown className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
