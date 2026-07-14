@@ -8,14 +8,24 @@ import {
   Download,
   FileText,
   History,
+  Search,
   Star,
   Upload,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -27,6 +37,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import {
   listDocumentosByProjeto,
+  listDocumentosByEmpresa,
   registerDocumentoVersion,
   getDocumentoDownloadUrl,
 } from "@/lib/documentos.functions";
@@ -40,7 +51,8 @@ import {
 type TipoDoc = (typeof tiposDocumento)[number];
 type DocumentoRow = {
   id: string;
-  projeto_id: string;
+  projeto_id: string | null;
+  empresa_cliente_id: string | null;
   grupo_documento_id: string;
   tipo: TipoDoc;
   nome_arquivo: string;
@@ -53,6 +65,10 @@ type DocumentoRow = {
   criado_em: string;
   autor: { id: string; nome: string } | null;
 };
+
+type Owner =
+  | { kind: "projeto"; projetoId: string }
+  | { kind: "empresa"; empresaId: string };
 
 const BUCKET = "documentos-projetos";
 const MAX_BYTES = 25 * 1024 * 1024;
@@ -70,12 +86,35 @@ function validateFile(file: File): string | null {
   return null;
 }
 
-export function DocumentosTab({ projetoId }: { projetoId: string }) {
-  const listFn = useServerFn(listDocumentosByProjeto);
+function ownerKey(o: Owner) {
+  return o.kind === "projeto" ? o.projetoId : o.empresaId;
+}
+function storagePrefix(o: Owner) {
+  return o.kind === "projeto" ? o.projetoId : `empresa/${o.empresaId}`;
+}
+
+export function DocumentosTab(props:
+  | { projetoId: string; empresaId?: never }
+  | { empresaId: string; projetoId?: never }) {
+  const owner: Owner = props.projetoId
+    ? { kind: "projeto", projetoId: props.projetoId }
+    : { kind: "empresa", empresaId: props.empresaId! };
+
+  const listByProjeto = useServerFn(listDocumentosByProjeto);
+  const listByEmpresa = useServerFn(listDocumentosByEmpresa);
+
   const q = useQuery({
-    queryKey: ["documentos", projetoId],
-    queryFn: () => listFn({ data: { projeto_id: projetoId } }) as Promise<DocumentoRow[]>,
+    queryKey: ["documentos", owner.kind, ownerKey(owner)],
+    queryFn: () =>
+      (owner.kind === "projeto"
+        ? listByProjeto({ data: { projeto_id: owner.projetoId } })
+        : listByEmpresa({ data: { empresa_cliente_id: owner.empresaId } })
+      ) as Promise<DocumentoRow[]>,
   });
+
+  const [search, setSearch] = useState("");
+  const [tipoFilter, setTipoFilter] = useState<TipoDoc | "todos">("todos");
+  const [grupoFilter, setGrupoFilter] = useState("");
 
   const grupos = useMemo(() => {
     const rows = (q.data ?? []) as DocumentoRow[];
@@ -96,6 +135,22 @@ export function DocumentosTab({ projetoId }: { projetoId: string }) {
     return grupos;
   }, [q.data]);
 
+  const filtered = useMemo(() => {
+    const s = search.trim().toLowerCase();
+    const g = grupoFilter.trim().toLowerCase();
+    return grupos.filter((grp) => {
+      if (tipoFilter !== "todos" && grp.tipo !== tipoFilter) return false;
+      if (g && !grp.grupoId.toLowerCase().includes(g)) return false;
+      if (s) {
+        const inAny = grp.versoes.some((v) =>
+          v.nome_arquivo.toLowerCase().includes(s),
+        );
+        if (!inAny) return false;
+      }
+      return true;
+    });
+  }, [grupos, search, tipoFilter, grupoFilter]);
+
   const gruposPorTipo = useMemo(() => {
     const out: Record<TipoDoc, typeof grupos> = {
       material: [],
@@ -104,20 +159,87 @@ export function DocumentosTab({ projetoId }: { projetoId: string }) {
       relatorio: [],
       outro: [],
     };
-    for (const g of grupos) out[g.tipo].push(g);
+    for (const g of filtered) out[g.tipo].push(g);
     return out;
-  }, [grupos]);
+  }, [filtered]);
+
+  const hasFilters =
+    search.trim() !== "" || tipoFilter !== "todos" || grupoFilter.trim() !== "";
+  const tiposParaExibir =
+    tipoFilter === "todos" ? tiposDocumento : ([tipoFilter] as TipoDoc[]);
 
   if (q.isLoading) return <p className="text-sm text-muted-foreground">Carregando documentos…</p>;
 
   return (
     <div className="space-y-6">
-      {tiposDocumento.map((tipo) => (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="grid gap-3 md:grid-cols-[1fr_200px_1fr_auto]">
+            <div>
+              <Label className="text-xs">Buscar por nome do arquivo</Label>
+              <div className="relative">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  className="pl-8"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="ex.: contrato_finep.pdf"
+                />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">Tipo</Label>
+              <Select
+                value={tipoFilter}
+                onValueChange={(v) => setTipoFilter(v as TipoDoc | "todos")}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos os tipos</SelectItem>
+                  {tiposDocumento.map((t) => (
+                    <SelectItem key={t} value={t}>{tipoDocumentoLabel(t)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">ID do grupo (grupo_documento_id)</Label>
+              <Input
+                value={grupoFilter}
+                onChange={(e) => setGrupoFilter(e.target.value)}
+                placeholder="UUID completo ou parcial"
+              />
+            </div>
+            <div className="flex items-end">
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={!hasFilters}
+                onClick={() => {
+                  setSearch("");
+                  setTipoFilter("todos");
+                  setGrupoFilter("");
+                }}
+              >
+                <X className="h-4 w-4 mr-1" /> Limpar
+              </Button>
+            </div>
+          </div>
+          {hasFilters && (
+            <p className="text-xs text-muted-foreground mt-3">
+              {filtered.length} {filtered.length === 1 ? "documento encontrado" : "documentos encontrados"}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {tiposParaExibir.map((tipo) => (
         <TipoSection
           key={tipo}
-          projetoId={projetoId}
+          owner={owner}
           tipo={tipo}
           grupos={gruposPorTipo[tipo]}
+          filteringActive={hasFilters}
         />
       ))}
     </div>
@@ -125,13 +247,15 @@ export function DocumentosTab({ projetoId }: { projetoId: string }) {
 }
 
 function TipoSection({
-  projetoId,
+  owner,
   tipo,
   grupos,
+  filteringActive,
 }: {
-  projetoId: string;
+  owner: Owner;
   tipo: TipoDoc;
   grupos: { grupoId: string; tipo: TipoDoc; atual: DocumentoRow; versoes: DocumentoRow[] }[];
+  filteringActive: boolean;
 }) {
   const [open, setOpen] = useState(true);
   return (
@@ -151,15 +275,19 @@ function TipoSection({
 
         {open && (
           <div className="space-y-4">
-            <NewDocumentDropzone projetoId={projetoId} tipo={tipo} />
+            {!filteringActive && <NewDocumentDropzone owner={owner} tipo={tipo} />}
             {grupos.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhum documento neste grupo ainda.</p>
+              <p className="text-sm text-muted-foreground">
+                {filteringActive
+                  ? "Nenhum documento corresponde aos filtros."
+                  : "Nenhum documento neste grupo ainda."}
+              </p>
             ) : (
               <div className="space-y-3">
                 {grupos.map((g) => (
                   <DocumentGroupCard
                     key={g.grupoId}
-                    projetoId={projetoId}
+                    owner={owner}
                     tipo={tipo}
                     atual={g.atual}
                     versoes={g.versoes}
@@ -175,12 +303,12 @@ function TipoSection({
 }
 
 function DocumentGroupCard({
-  projetoId,
+  owner,
   tipo,
   atual,
   versoes,
 }: {
-  projetoId: string;
+  owner: Owner;
   tipo: TipoDoc;
   atual: DocumentoRow;
   versoes: DocumentoRow[];
@@ -203,6 +331,9 @@ function DocumentGroupCard({
             {atual.autor?.nome ?? "—"} em {formatDate(atual.criado_em)}
             {" · "}
             {versoes.length} {versoes.length === 1 ? "versão" : "versões"}
+          </p>
+          <p className="text-[10px] text-muted-foreground font-mono mt-1 break-all">
+            grupo: {atual.grupo_documento_id}
           </p>
           {atual.descricao_da_versao && (
             <p className="text-sm mt-2">{atual.descricao_da_versao}</p>
@@ -259,7 +390,7 @@ function DocumentGroupCard({
       <NewVersionDialog
         open={openNewVersion}
         onOpenChange={setOpenNewVersion}
-        projetoId={projetoId}
+        owner={owner}
         tipo={tipo}
         grupoDocumentoId={atual.grupo_documento_id}
       />
@@ -290,7 +421,7 @@ function DownloadButton({ documentoId }: { documentoId: string }) {
 
 /* ---------- Upload dropzones ---------- */
 
-function NewDocumentDropzone({ projetoId, tipo }: { projetoId: string; tipo: TipoDoc }) {
+function NewDocumentDropzone({ owner, tipo }: { owner: Owner; tipo: TipoDoc }) {
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   return (
     <>
@@ -302,7 +433,7 @@ function NewDocumentDropzone({ projetoId, tipo }: { projetoId: string; tipo: Tip
         open={!!pendingFile}
         onOpenChange={(v) => !v && setPendingFile(null)}
         file={pendingFile}
-        projetoId={projetoId}
+        owner={owner}
         tipo={tipo}
         grupoDocumentoId={null}
       />
@@ -313,13 +444,13 @@ function NewDocumentDropzone({ projetoId, tipo }: { projetoId: string; tipo: Tip
 function NewVersionDialog({
   open,
   onOpenChange,
-  projetoId,
+  owner,
   tipo,
   grupoDocumentoId,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  projetoId: string;
+  owner: Owner;
   tipo: TipoDoc;
   grupoDocumentoId: string;
 }) {
@@ -344,7 +475,7 @@ function NewVersionDialog({
         ) : (
           <UploadForm
             file={file}
-            projetoId={projetoId}
+            owner={owner}
             tipo={tipo}
             grupoDocumentoId={grupoDocumentoId}
             onDone={() => {
@@ -363,14 +494,14 @@ function UploadDialog({
   open,
   onOpenChange,
   file,
-  projetoId,
+  owner,
   tipo,
   grupoDocumentoId,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   file: File | null;
-  projetoId: string;
+  owner: Owner;
   tipo: TipoDoc;
   grupoDocumentoId: string | null;
 }) {
@@ -383,7 +514,7 @@ function UploadDialog({
         {file && (
           <UploadForm
             file={file}
-            projetoId={projetoId}
+            owner={owner}
             tipo={tipo}
             grupoDocumentoId={grupoDocumentoId}
             onDone={() => onOpenChange(false)}
@@ -396,14 +527,14 @@ function UploadDialog({
 
 function UploadForm({
   file,
-  projetoId,
+  owner,
   tipo,
   grupoDocumentoId,
   onDone,
   requireDescription = false,
 }: {
   file: File;
-  projetoId: string;
+  owner: Owner;
   tipo: TipoDoc;
   grupoDocumentoId: string | null;
   onDone: () => void;
@@ -417,9 +548,8 @@ function UploadForm({
     mutationFn: async () => {
       const grupoId = grupoDocumentoId ?? crypto.randomUUID();
       const safeName = sanitize(file.name);
-      // path provisório com timestamp; server define versão real, mas usamos ts para evitar colisão
       const stamp = Date.now();
-      const path = `${projetoId}/${grupoId}/${stamp}-${safeName}`;
+      const path = `${storagePrefix(owner)}/${grupoId}/${stamp}-${safeName}`;
 
       const { error: upErr } = await supabase.storage
         .from(BUCKET)
@@ -429,7 +559,8 @@ function UploadForm({
       try {
         return await registerFn({
           data: {
-            projeto_id: projetoId,
+            projeto_id: owner.kind === "projeto" ? owner.projetoId : null,
+            empresa_cliente_id: owner.kind === "empresa" ? owner.empresaId : null,
             grupo_documento_id: grupoDocumentoId ?? grupoId,
             tipo,
             nome_arquivo: file.name,
@@ -440,15 +571,18 @@ function UploadForm({
           },
         });
       } catch (e) {
-        // rollback do storage se metadata falhar
         await supabase.storage.from(BUCKET).remove([path]).catch(() => {});
         throw e;
       }
     },
     onSuccess: () => {
       toast.success("Documento enviado");
-      qc.invalidateQueries({ queryKey: ["documentos", projetoId] });
-      qc.invalidateQueries({ queryKey: ["projeto", projetoId] });
+      qc.invalidateQueries({ queryKey: ["documentos", owner.kind, ownerKey(owner)] });
+      if (owner.kind === "projeto") {
+        qc.invalidateQueries({ queryKey: ["projeto", owner.projetoId] });
+      } else {
+        qc.invalidateQueries({ queryKey: ["empresa", owner.empresaId] });
+      }
       onDone();
     },
     onError: (e: unknown) =>
