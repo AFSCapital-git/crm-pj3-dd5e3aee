@@ -85,7 +85,7 @@ export const listInsights = createServerFn({ method: "GET" })
   }).parse(d ?? {}))
   .handler(async ({ data, context }) => {
     let q = context.supabase.from("insights_ia" as any)
-      .select("*, revisor:revisado_por(id), autor:gerado_por(id)")
+      .select("*")
       .order("gerado_em", { ascending: false })
       .limit(100);
     if (data.projeto_id === null) q = q.is("projeto_id", null);
