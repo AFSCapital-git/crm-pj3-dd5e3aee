@@ -139,6 +139,10 @@ function ProjetoDetail() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="documentos">
+          <DocumentosTab projetoId={id} />
+        </TabsContent>
+
         <TabsContent value="emails">
           <EmailsTab projetoId={id} codigoRastreio={projeto.codigo_rastreio} />
         </TabsContent>
