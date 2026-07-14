@@ -67,3 +67,21 @@ export function formatDate(v: string | null | undefined) {
   const [y, m, d] = v.split("T")[0].split("-");
   return `${d}/${m}/${y}`;
 }
+
+const tipoDocumentoLabels: Record<string, string> = {
+  material: "Materiais",
+  contrato: "Contratos",
+  aditivo: "Aditivos",
+  relatorio: "Relatórios",
+  outro: "Outros",
+};
+export function tipoDocumentoLabel(s: string) { return tipoDocumentoLabels[s] ?? s; }
+export const tiposDocumento = ["material", "contrato", "aditivo", "relatorio", "outro"] as const;
+
+export function formatFileSize(bytes: number | null | undefined) {
+  if (bytes === null || bytes === undefined) return "—";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
+}
