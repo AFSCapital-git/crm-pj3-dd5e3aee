@@ -13,11 +13,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Plus, Trash2 } from "lucide-react";
+import { CheckCircle2, Plus, Trash2, Mail } from "lucide-react";
 import { getProjeto } from "@/lib/projetos.functions";
 import { upsertMarco, marcarEntregue, deleteMarco, createInteracao } from "@/lib/marcos.functions";
 import { UrgencyBadge, formatBRL, formatDate, statusProjetoLabel, tipoMarcoLabel, tipoInteracaoLabel } from "@/lib/labels";
 import { DocumentosTab } from "@/components/documentos-tab";
+import { EmailsTab } from "@/components/emails-tab";
 
 export const Route = createFileRoute("/_authenticated/projetos/$id")({
   component: ProjetoDetail,
@@ -76,6 +77,7 @@ function ProjetoDetail() {
           <TabsTrigger value="dados">Dados</TabsTrigger>
           <TabsTrigger value="marcos">Marcos ({marcos.length})</TabsTrigger>
           <TabsTrigger value="documentos">Documentos</TabsTrigger>
+          <TabsTrigger value="emails">E-mails</TabsTrigger>
           <TabsTrigger value="timeline">Linha do tempo ({interacoes.length})</TabsTrigger>
         </TabsList>
 

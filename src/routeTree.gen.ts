@@ -14,10 +14,12 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedUsuariosRouteImport } from './routes/_authenticated/usuarios'
 import { Route as AuthenticatedEmpresasRouteImport } from './routes/_authenticated/empresas'
+import { Route as AuthenticatedEmailsNaoVinculadosRouteImport } from './routes/_authenticated/emails-nao-vinculados'
 import { Route as AuthenticatedEditaisRouteImport } from './routes/_authenticated/editais'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedCronogramaRouteImport } from './routes/_authenticated/cronograma'
 import { Route as AuthenticatedProjetosIndexRouteImport } from './routes/_authenticated/projetos.index'
+import { Route as ApiPublicInboundEmailRouteImport } from './routes/api/public/inbound-email'
 import { Route as AuthenticatedProjetosIdRouteImport } from './routes/_authenticated/projetos.$id'
 import { Route as AuthenticatedEmpresasIdRouteImport } from './routes/_authenticated/empresas.$id'
 
@@ -45,6 +47,12 @@ const AuthenticatedEmpresasRoute = AuthenticatedEmpresasRouteImport.update({
   path: '/empresas',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedEmailsNaoVinculadosRoute =
+  AuthenticatedEmailsNaoVinculadosRouteImport.update({
+    id: '/emails-nao-vinculados',
+    path: '/emails-nao-vinculados',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedEditaisRoute = AuthenticatedEditaisRouteImport.update({
   id: '/editais',
   path: '/editais',
@@ -66,6 +74,11 @@ const AuthenticatedProjetosIndexRoute =
     path: '/projetos/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiPublicInboundEmailRoute = ApiPublicInboundEmailRouteImport.update({
+  id: '/api/public/inbound-email',
+  path: '/api/public/inbound-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedProjetosIdRoute = AuthenticatedProjetosIdRouteImport.update({
   id: '/projetos/$id',
   path: '/projetos/$id',
@@ -83,10 +96,12 @@ export interface FileRoutesByFullPath {
   '/cronograma': typeof AuthenticatedCronogramaRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/editais': typeof AuthenticatedEditaisRoute
+  '/emails-nao-vinculados': typeof AuthenticatedEmailsNaoVinculadosRoute
   '/empresas': typeof AuthenticatedEmpresasRouteWithChildren
   '/usuarios': typeof AuthenticatedUsuariosRoute
   '/empresas/$id': typeof AuthenticatedEmpresasIdRoute
   '/projetos/$id': typeof AuthenticatedProjetosIdRoute
+  '/api/public/inbound-email': typeof ApiPublicInboundEmailRoute
   '/projetos/': typeof AuthenticatedProjetosIndexRoute
 }
 export interface FileRoutesByTo {
@@ -95,10 +110,12 @@ export interface FileRoutesByTo {
   '/cronograma': typeof AuthenticatedCronogramaRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/editais': typeof AuthenticatedEditaisRoute
+  '/emails-nao-vinculados': typeof AuthenticatedEmailsNaoVinculadosRoute
   '/empresas': typeof AuthenticatedEmpresasRouteWithChildren
   '/usuarios': typeof AuthenticatedUsuariosRoute
   '/empresas/$id': typeof AuthenticatedEmpresasIdRoute
   '/projetos/$id': typeof AuthenticatedProjetosIdRoute
+  '/api/public/inbound-email': typeof ApiPublicInboundEmailRoute
   '/projetos': typeof AuthenticatedProjetosIndexRoute
 }
 export interface FileRoutesById {
@@ -109,10 +126,12 @@ export interface FileRoutesById {
   '/_authenticated/cronograma': typeof AuthenticatedCronogramaRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/editais': typeof AuthenticatedEditaisRoute
+  '/_authenticated/emails-nao-vinculados': typeof AuthenticatedEmailsNaoVinculadosRoute
   '/_authenticated/empresas': typeof AuthenticatedEmpresasRouteWithChildren
   '/_authenticated/usuarios': typeof AuthenticatedUsuariosRoute
   '/_authenticated/empresas/$id': typeof AuthenticatedEmpresasIdRoute
   '/_authenticated/projetos/$id': typeof AuthenticatedProjetosIdRoute
+  '/api/public/inbound-email': typeof ApiPublicInboundEmailRoute
   '/_authenticated/projetos/': typeof AuthenticatedProjetosIndexRoute
 }
 export interface FileRouteTypes {
@@ -123,10 +142,12 @@ export interface FileRouteTypes {
     | '/cronograma'
     | '/dashboard'
     | '/editais'
+    | '/emails-nao-vinculados'
     | '/empresas'
     | '/usuarios'
     | '/empresas/$id'
     | '/projetos/$id'
+    | '/api/public/inbound-email'
     | '/projetos/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -135,10 +156,12 @@ export interface FileRouteTypes {
     | '/cronograma'
     | '/dashboard'
     | '/editais'
+    | '/emails-nao-vinculados'
     | '/empresas'
     | '/usuarios'
     | '/empresas/$id'
     | '/projetos/$id'
+    | '/api/public/inbound-email'
     | '/projetos'
   id:
     | '__root__'
@@ -148,10 +171,12 @@ export interface FileRouteTypes {
     | '/_authenticated/cronograma'
     | '/_authenticated/dashboard'
     | '/_authenticated/editais'
+    | '/_authenticated/emails-nao-vinculados'
     | '/_authenticated/empresas'
     | '/_authenticated/usuarios'
     | '/_authenticated/empresas/$id'
     | '/_authenticated/projetos/$id'
+    | '/api/public/inbound-email'
     | '/_authenticated/projetos/'
   fileRoutesById: FileRoutesById
 }
@@ -159,6 +184,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiPublicInboundEmailRoute: typeof ApiPublicInboundEmailRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -198,6 +224,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEmpresasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/emails-nao-vinculados': {
+      id: '/_authenticated/emails-nao-vinculados'
+      path: '/emails-nao-vinculados'
+      fullPath: '/emails-nao-vinculados'
+      preLoaderRoute: typeof AuthenticatedEmailsNaoVinculadosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/editais': {
       id: '/_authenticated/editais'
       path: '/editais'
@@ -225,6 +258,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/projetos/'
       preLoaderRoute: typeof AuthenticatedProjetosIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/public/inbound-email': {
+      id: '/api/public/inbound-email'
+      path: '/api/public/inbound-email'
+      fullPath: '/api/public/inbound-email'
+      preLoaderRoute: typeof ApiPublicInboundEmailRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/projetos/$id': {
       id: '/_authenticated/projetos/$id'
@@ -260,6 +300,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedCronogramaRoute: typeof AuthenticatedCronogramaRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedEditaisRoute: typeof AuthenticatedEditaisRoute
+  AuthenticatedEmailsNaoVinculadosRoute: typeof AuthenticatedEmailsNaoVinculadosRoute
   AuthenticatedEmpresasRoute: typeof AuthenticatedEmpresasRouteWithChildren
   AuthenticatedUsuariosRoute: typeof AuthenticatedUsuariosRoute
   AuthenticatedProjetosIdRoute: typeof AuthenticatedProjetosIdRoute
@@ -270,6 +311,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCronogramaRoute: AuthenticatedCronogramaRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedEditaisRoute: AuthenticatedEditaisRoute,
+  AuthenticatedEmailsNaoVinculadosRoute: AuthenticatedEmailsNaoVinculadosRoute,
   AuthenticatedEmpresasRoute: AuthenticatedEmpresasRouteWithChildren,
   AuthenticatedUsuariosRoute: AuthenticatedUsuariosRoute,
   AuthenticatedProjetosIdRoute: AuthenticatedProjetosIdRoute,
@@ -283,6 +325,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiPublicInboundEmailRoute: ApiPublicInboundEmailRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
