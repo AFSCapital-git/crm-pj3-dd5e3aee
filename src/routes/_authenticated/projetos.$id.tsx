@@ -17,6 +17,7 @@ import { CheckCircle2, Plus, Trash2 } from "lucide-react";
 import { getProjeto } from "@/lib/projetos.functions";
 import { upsertMarco, marcarEntregue, deleteMarco, createInteracao } from "@/lib/marcos.functions";
 import { UrgencyBadge, formatBRL, formatDate, statusProjetoLabel, tipoMarcoLabel, tipoInteracaoLabel } from "@/lib/labels";
+import { DocumentosTab } from "@/components/documentos-tab";
 
 export const Route = createFileRoute("/_authenticated/projetos/$id")({
   component: ProjetoDetail,
@@ -74,8 +75,10 @@ function ProjetoDetail() {
         <TabsList>
           <TabsTrigger value="dados">Dados</TabsTrigger>
           <TabsTrigger value="marcos">Marcos ({marcos.length})</TabsTrigger>
+          <TabsTrigger value="documentos">Documentos</TabsTrigger>
           <TabsTrigger value="timeline">Linha do tempo ({interacoes.length})</TabsTrigger>
         </TabsList>
+
 
         <TabsContent value="dados">
           <Card><CardContent className="pt-6 grid gap-4 sm:grid-cols-2">
