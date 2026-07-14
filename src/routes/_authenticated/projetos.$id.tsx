@@ -139,6 +139,10 @@ function ProjetoDetail() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="emails">
+          <EmailsTab projetoId={id} codigoRastreio={projeto.codigo_rastreio} />
+        </TabsContent>
+
         <TabsContent value="timeline">
           <Card>
             <CardHeader><CardTitle>Linha do tempo</CardTitle></CardHeader>
@@ -151,7 +155,10 @@ function ProjetoDetail() {
                 {interacoes.map((i: any) => (
                   <div key={i.id} className="border-l-2 border-primary/40 pl-4 py-1">
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Badge variant="outline">{tipoInteracaoLabel(i.tipo)}</Badge>
+                      <Badge variant={i.tipo === "email_encaminhado" ? "secondary" : "outline"} className="flex items-center gap-1">
+                        {i.tipo === "email_encaminhado" && <Mail className="h-3 w-3" />}
+                        {tipoInteracaoLabel(i.tipo)}
+                      </Badge>
                       <span>{new Date(i.data_hora).toLocaleString("pt-BR")}</span>
                       {i.autor?.nome && <span>· {i.autor.nome}</span>}
                     </div>
