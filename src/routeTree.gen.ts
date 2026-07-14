@@ -13,6 +13,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedUsuariosRouteImport } from './routes/_authenticated/usuarios'
+import { Route as AuthenticatedInsightsRouteImport } from './routes/_authenticated/insights'
 import { Route as AuthenticatedEmpresasRouteImport } from './routes/_authenticated/empresas'
 import { Route as AuthenticatedEmailsNaoVinculadosRouteImport } from './routes/_authenticated/emails-nao-vinculados'
 import { Route as AuthenticatedEditaisRouteImport } from './routes/_authenticated/editais'
@@ -40,6 +41,11 @@ const IndexRoute = IndexRouteImport.update({
 const AuthenticatedUsuariosRoute = AuthenticatedUsuariosRouteImport.update({
   id: '/usuarios',
   path: '/usuarios',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedInsightsRoute = AuthenticatedInsightsRouteImport.update({
+  id: '/insights',
+  path: '/insights',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedEmpresasRoute = AuthenticatedEmpresasRouteImport.update({
@@ -98,6 +104,7 @@ export interface FileRoutesByFullPath {
   '/editais': typeof AuthenticatedEditaisRoute
   '/emails-nao-vinculados': typeof AuthenticatedEmailsNaoVinculadosRoute
   '/empresas': typeof AuthenticatedEmpresasRouteWithChildren
+  '/insights': typeof AuthenticatedInsightsRoute
   '/usuarios': typeof AuthenticatedUsuariosRoute
   '/empresas/$id': typeof AuthenticatedEmpresasIdRoute
   '/projetos/$id': typeof AuthenticatedProjetosIdRoute
@@ -112,6 +119,7 @@ export interface FileRoutesByTo {
   '/editais': typeof AuthenticatedEditaisRoute
   '/emails-nao-vinculados': typeof AuthenticatedEmailsNaoVinculadosRoute
   '/empresas': typeof AuthenticatedEmpresasRouteWithChildren
+  '/insights': typeof AuthenticatedInsightsRoute
   '/usuarios': typeof AuthenticatedUsuariosRoute
   '/empresas/$id': typeof AuthenticatedEmpresasIdRoute
   '/projetos/$id': typeof AuthenticatedProjetosIdRoute
@@ -128,6 +136,7 @@ export interface FileRoutesById {
   '/_authenticated/editais': typeof AuthenticatedEditaisRoute
   '/_authenticated/emails-nao-vinculados': typeof AuthenticatedEmailsNaoVinculadosRoute
   '/_authenticated/empresas': typeof AuthenticatedEmpresasRouteWithChildren
+  '/_authenticated/insights': typeof AuthenticatedInsightsRoute
   '/_authenticated/usuarios': typeof AuthenticatedUsuariosRoute
   '/_authenticated/empresas/$id': typeof AuthenticatedEmpresasIdRoute
   '/_authenticated/projetos/$id': typeof AuthenticatedProjetosIdRoute
@@ -144,6 +153,7 @@ export interface FileRouteTypes {
     | '/editais'
     | '/emails-nao-vinculados'
     | '/empresas'
+    | '/insights'
     | '/usuarios'
     | '/empresas/$id'
     | '/projetos/$id'
@@ -158,6 +168,7 @@ export interface FileRouteTypes {
     | '/editais'
     | '/emails-nao-vinculados'
     | '/empresas'
+    | '/insights'
     | '/usuarios'
     | '/empresas/$id'
     | '/projetos/$id'
@@ -173,6 +184,7 @@ export interface FileRouteTypes {
     | '/_authenticated/editais'
     | '/_authenticated/emails-nao-vinculados'
     | '/_authenticated/empresas'
+    | '/_authenticated/insights'
     | '/_authenticated/usuarios'
     | '/_authenticated/empresas/$id'
     | '/_authenticated/projetos/$id'
@@ -215,6 +227,13 @@ declare module '@tanstack/react-router' {
       path: '/usuarios'
       fullPath: '/usuarios'
       preLoaderRoute: typeof AuthenticatedUsuariosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/insights': {
+      id: '/_authenticated/insights'
+      path: '/insights'
+      fullPath: '/insights'
+      preLoaderRoute: typeof AuthenticatedInsightsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/empresas': {
@@ -302,6 +321,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedEditaisRoute: typeof AuthenticatedEditaisRoute
   AuthenticatedEmailsNaoVinculadosRoute: typeof AuthenticatedEmailsNaoVinculadosRoute
   AuthenticatedEmpresasRoute: typeof AuthenticatedEmpresasRouteWithChildren
+  AuthenticatedInsightsRoute: typeof AuthenticatedInsightsRoute
   AuthenticatedUsuariosRoute: typeof AuthenticatedUsuariosRoute
   AuthenticatedProjetosIdRoute: typeof AuthenticatedProjetosIdRoute
   AuthenticatedProjetosIndexRoute: typeof AuthenticatedProjetosIndexRoute
@@ -313,6 +333,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedEditaisRoute: AuthenticatedEditaisRoute,
   AuthenticatedEmailsNaoVinculadosRoute: AuthenticatedEmailsNaoVinculadosRoute,
   AuthenticatedEmpresasRoute: AuthenticatedEmpresasRouteWithChildren,
+  AuthenticatedInsightsRoute: AuthenticatedInsightsRoute,
   AuthenticatedUsuariosRoute: AuthenticatedUsuariosRoute,
   AuthenticatedProjetosIdRoute: AuthenticatedProjetosIdRoute,
   AuthenticatedProjetosIndexRoute: AuthenticatedProjetosIndexRoute,
