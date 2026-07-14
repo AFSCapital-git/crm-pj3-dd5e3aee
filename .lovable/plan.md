@@ -60,6 +60,7 @@ Layout do componente:
 - **Indicador visual**: versão atual = badge verde/primary + ícone `Star`; anteriores = badge cinza + opacidade 0.8.
 
 Validação client-side de tipo de arquivo:
+
 - Extensões aceitas: `.pdf .doc .docx .xls .xlsx .png .jpg .jpeg .webp`
 - Tamanho máximo: 25 MB (mostrar toast se exceder)
 - Zod schema `documentoUploadSchema` para validar antes do upload

@@ -1,5 +1,14 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, Building2, FileText, FolderKanban, Calendar, Users, Mail, Bot } from "lucide-react";
+import {
+  LayoutDashboard,
+  Building2,
+  FileText,
+  FolderKanban,
+  Calendar,
+  Users,
+  Mail,
+  Bot,
+} from "lucide-react";
 import {
   Sidebar,
   SidebarContent,

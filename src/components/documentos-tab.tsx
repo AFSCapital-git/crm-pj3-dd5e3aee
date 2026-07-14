@@ -41,12 +41,7 @@ import {
   registerDocumentoVersion,
   getDocumentoDownloadUrl,
 } from "@/lib/documentos.functions";
-import {
-  formatFileSize,
-  formatDate,
-  tipoDocumentoLabel,
-  tiposDocumento,
-} from "@/lib/labels";
+import { formatFileSize, formatDate, tipoDocumentoLabel, tiposDocumento } from "@/lib/labels";
 
 type TipoDoc = (typeof tiposDocumento)[number];
 type DocumentoRow = {
@@ -66,9 +61,7 @@ type DocumentoRow = {
   autor: { id: string; nome: string } | null;
 };
 
-type Owner =
-  | { kind: "projeto"; projetoId: string }
-  | { kind: "empresa"; empresaId: string };
+type Owner = { kind: "projeto"; projetoId: string } | { kind: "empresa"; empresaId: string };
 
 const BUCKET = "documentos-projetos";
 const MAX_BYTES = 25 * 1024 * 1024;
@@ -93,9 +86,9 @@ function storagePrefix(o: Owner) {
   return o.kind === "projeto" ? o.projetoId : `empresa/${o.empresaId}`;
 }
 
-export function DocumentosTab(props:
-  | { projetoId: string; empresaId?: never }
-  | { empresaId: string; projetoId?: never }) {
+export function DocumentosTab(
+  props: { projetoId: string; empresaId?: never } | { empresaId: string; projetoId?: never },
+) {
   const owner: Owner = props.projetoId
     ? { kind: "projeto", projetoId: props.projetoId }
     : { kind: "empresa", empresaId: props.empresaId! };
@@ -108,8 +101,9 @@ export function DocumentosTab(props:
     queryFn: () =>
       (owner.kind === "projeto"
         ? listByProjeto({ data: { projeto_id: owner.projetoId } })
-        : listByEmpresa({ data: { empresa_cliente_id: owner.empresaId } })
-      ) as Promise<DocumentoRow[]>,
+        : listByEmpresa({ data: { empresa_cliente_id: owner.empresaId } })) as Promise<
+        DocumentoRow[]
+      >,
   });
 
   const [search, setSearch] = useState("");
@@ -142,9 +136,7 @@ export function DocumentosTab(props:
       if (tipoFilter !== "todos" && grp.tipo !== tipoFilter) return false;
       if (g && !grp.grupoId.toLowerCase().includes(g)) return false;
       if (s) {
-        const inAny = grp.versoes.some((v) =>
-          v.nome_arquivo.toLowerCase().includes(s),
-        );
+        const inAny = grp.versoes.some((v) => v.nome_arquivo.toLowerCase().includes(s));
         if (!inAny) return false;
       }
       return true;
@@ -163,10 +155,8 @@ export function DocumentosTab(props:
     return out;
   }, [filtered]);
 
-  const hasFilters =
-    search.trim() !== "" || tipoFilter !== "todos" || grupoFilter.trim() !== "";
-  const tiposParaExibir =
-    tipoFilter === "todos" ? tiposDocumento : ([tipoFilter] as TipoDoc[]);
+  const hasFilters = search.trim() !== "" || tipoFilter !== "todos" || grupoFilter.trim() !== "";
+  const tiposParaExibir = tipoFilter === "todos" ? tiposDocumento : ([tipoFilter] as TipoDoc[]);
 
   if (q.isLoading) return <p className="text-sm text-muted-foreground">Carregando documentos…</p>;
 
@@ -193,11 +183,15 @@ export function DocumentosTab(props:
                 value={tipoFilter}
                 onValueChange={(v) => setTipoFilter(v as TipoDoc | "todos")}
               >
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todos">Todos os tipos</SelectItem>
                   {tiposDocumento.map((t) => (
-                    <SelectItem key={t} value={t}>{tipoDocumentoLabel(t)}</SelectItem>
+                    <SelectItem key={t} value={t}>
+                      {tipoDocumentoLabel(t)}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -227,7 +221,8 @@ export function DocumentosTab(props:
           </div>
           {hasFilters && (
             <p className="text-xs text-muted-foreground mt-3">
-              {filtered.length} {filtered.length === 1 ? "documento encontrado" : "documentos encontrados"}
+              {filtered.length}{" "}
+              {filtered.length === 1 ? "documento encontrado" : "documentos encontrados"}
             </p>
           )}
         </CardContent>
@@ -327,17 +322,15 @@ function DocumentGroupCard({
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            {formatFileSize(atual.tamanho_arquivo)} · enviado por{" "}
-            {atual.autor?.nome ?? "—"} em {formatDate(atual.criado_em)}
+            {formatFileSize(atual.tamanho_arquivo)} · enviado por {atual.autor?.nome ?? "—"} em{" "}
+            {formatDate(atual.criado_em)}
             {" · "}
             {versoes.length} {versoes.length === 1 ? "versão" : "versões"}
           </p>
           <p className="text-[10px] text-muted-foreground font-mono mt-1 break-all">
             grupo: {atual.grupo_documento_id}
           </p>
-          {atual.descricao_da_versao && (
-            <p className="text-sm mt-2">{atual.descricao_da_versao}</p>
-          )}
+          {atual.descricao_da_versao && <p className="text-sm mt-2">{atual.descricao_da_versao}</p>}
         </div>
         <div className="flex flex-col gap-2 shrink-0">
           <DownloadButton documentoId={atual.id} />
@@ -371,14 +364,12 @@ function DocumentGroupCard({
                     <Badge variant="outline">v{v.numero_versao}</Badge>
                   )}
                   <span className="text-xs text-muted-foreground">
-                    {new Date(v.criado_em).toLocaleString("pt-BR")} ·{" "}
-                    {v.autor?.nome ?? "—"} · {formatFileSize(v.tamanho_arquivo)}
+                    {new Date(v.criado_em).toLocaleString("pt-BR")} · {v.autor?.nome ?? "—"} ·{" "}
+                    {formatFileSize(v.tamanho_arquivo)}
                   </span>
                 </div>
                 {v.descricao_da_versao && (
-                  <p className="text-sm mt-1 text-muted-foreground">
-                    {v.descricao_da_versao}
-                  </p>
+                  <p className="text-sm mt-1 text-muted-foreground">{v.descricao_da_versao}</p>
                 )}
               </div>
               <DownloadButton documentoId={v.id} />
@@ -571,7 +562,10 @@ function UploadForm({
           },
         });
       } catch (e) {
-        await supabase.storage.from(BUCKET).remove([path]).catch(() => {});
+        await supabase.storage
+          .from(BUCKET)
+          .remove([path])
+          .catch(() => {});
         throw e;
       }
     },
@@ -585,8 +579,7 @@ function UploadForm({
       }
       onDone();
     },
-    onError: (e: unknown) =>
-      toast.error(e instanceof Error ? e.message : "Falha no upload"),
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Falha no upload"),
   });
 
   return (
@@ -607,9 +600,7 @@ function UploadForm({
       </div>
       <div>
         <Label>
-          {requireDescription
-            ? "O que mudou nesta versão? (obrigatório)"
-            : "Descrição (opcional)"}
+          {requireDescription ? "O que mudou nesta versão? (obrigatório)" : "Descrição (opcional)"}
         </Label>
         <Textarea
           value={descricao}
@@ -627,13 +618,7 @@ function UploadForm({
   );
 }
 
-function Dropzone({
-  label,
-  onFile,
-}: {
-  label: string;
-  onFile: (f: File) => void;
-}) {
+function Dropzone({ label, onFile }: { label: string; onFile: (f: File) => void }) {
   const [drag, setDrag] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 

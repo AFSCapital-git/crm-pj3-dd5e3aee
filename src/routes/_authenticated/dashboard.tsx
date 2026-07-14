@@ -4,7 +4,13 @@ import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
 import { getDashboard } from "@/lib/dashboard.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { UrgencyBadge, formatBRL, formatDate, statusProjetoLabel, tipoMarcoLabel } from "@/lib/labels";
+import {
+  UrgencyBadge,
+  formatBRL,
+  formatDate,
+  statusProjetoLabel,
+  tipoMarcoLabel,
+} from "@/lib/labels";
 import { AlertTriangle, TrendingUp, FolderKanban, Percent } from "lucide-react";
 import { AiInsightsPanel } from "@/components/ai-insights-panel";
 
@@ -24,21 +30,47 @@ function Dashboard() {
     { label: "Valor captado", value: formatBRL(d.valorCaptado), icon: TrendingUp },
     { label: "Projetos", value: d.totalProjetos, icon: FolderKanban },
     { label: "Taxa de aprovação", value: `${(d.taxaAprovacao * 100).toFixed(0)}%`, icon: Percent },
-    { label: "Marcos com alerta", value: d.counters.vencido + d.counters.critico_7 + d.counters.alerta_15 + d.counters.aviso_30, icon: AlertTriangle },
+    {
+      label: "Marcos com alerta",
+      value: d.counters.vencido + d.counters.critico_7 + d.counters.alerta_15 + d.counters.aviso_30,
+      icon: AlertTriangle,
+    },
   ];
 
   const counterCards = [
-    { key: "vencido", label: "Vencidos", value: d.counters.vencido, cls: "bg-urgency-overdue text-urgency-overdue-fg" },
-    { key: "critico_7", label: "≤ 7 dias", value: d.counters.critico_7, cls: "bg-urgency-critical text-urgency-critical-fg" },
-    { key: "alerta_15", label: "≤ 15 dias", value: d.counters.alerta_15, cls: "bg-urgency-warning text-urgency-warning-fg" },
-    { key: "aviso_30", label: "≤ 30 dias", value: d.counters.aviso_30, cls: "bg-urgency-notice text-urgency-notice-fg" },
+    {
+      key: "vencido",
+      label: "Vencidos",
+      value: d.counters.vencido,
+      cls: "bg-urgency-overdue text-urgency-overdue-fg",
+    },
+    {
+      key: "critico_7",
+      label: "≤ 7 dias",
+      value: d.counters.critico_7,
+      cls: "bg-urgency-critical text-urgency-critical-fg",
+    },
+    {
+      key: "alerta_15",
+      label: "≤ 15 dias",
+      value: d.counters.alerta_15,
+      cls: "bg-urgency-warning text-urgency-warning-fg",
+    },
+    {
+      key: "aviso_30",
+      label: "≤ 30 dias",
+      value: d.counters.aviso_30,
+      cls: "bg-urgency-notice text-urgency-notice-fg",
+    },
   ];
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">Visão consolidada da carteira e compliance de prazos.</p>
+        <p className="text-sm text-muted-foreground">
+          Visão consolidada da carteira e compliance de prazos.
+        </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -75,19 +107,25 @@ function Dashboard() {
             <p className="text-sm text-muted-foreground">Nenhum marco requer atenção imediata.</p>
           ) : (
             <div className="divide-y">
-              {d.marcos.map((m: any) => (
+              {d.marcos.map((m: Record<string, unknown>) => (
                 <Link
-                  key={m.id}
+                  key={m.id as string}
                   to="/projetos/$id"
-                  params={{ id: m.projeto_id }}
+                  params={{ id: m.projeto_id as string }}
                   className="flex items-center justify-between py-3 hover:bg-muted/40 -mx-2 px-2 rounded"
                 >
                   <div className="min-w-0">
-                    <p className="font-medium truncate">{tipoMarcoLabel(m.tipo)} — {m.nome_projeto}</p>
-                    <p className="text-xs text-muted-foreground truncate">{m.empresa_razao_social}</p>
+                    <p className="font-medium truncate">
+                      {tipoMarcoLabel(m.tipo)} — {m.nome_projeto}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {m.empresa_razao_social}
+                    </p>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
-                    <span className="text-sm text-muted-foreground">{formatDate(m.data_prevista)}</span>
+                    <span className="text-sm text-muted-foreground">
+                      {formatDate(m.data_prevista)}
+                    </span>
                     <UrgencyBadge urgencia={m.urgencia} />
                   </div>
                 </Link>
@@ -98,7 +136,9 @@ function Dashboard() {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle>Projetos por status</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>Projetos por status</CardTitle>
+        </CardHeader>
         <CardContent>
           <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-5">
             {Object.entries(d.statusCount).map(([status, count]) => (

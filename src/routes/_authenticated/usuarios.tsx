@@ -3,7 +3,14 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { listUsuarios } from "@/lib/dashboard.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 
 export const Route = createFileRoute("/_authenticated/usuarios")({
@@ -19,31 +26,44 @@ function UsuariosPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Usuários internos</h1>
         <p className="text-sm text-muted-foreground">
-          Consultores e administradores da consultoria. Novos usuários são criados via tela de cadastro em /auth.
-          O primeiro usuário criado vira admin; os demais entram como consultor. Papéis podem ser ajustados diretamente na tabela user_roles no backend.
+          Consultores e administradores da consultoria. Novos usuários são criados via tela de
+          cadastro em /auth. O primeiro usuário criado vira admin; os demais entram como consultor.
+          Papéis podem ser ajustados diretamente na tabela user_roles no backend.
         </p>
       </div>
       <Card>
-        <CardHeader><CardTitle>Lista</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>Lista</CardTitle>
+        </CardHeader>
         <CardContent>
-          {q.isLoading ? <p>Carregando…</p> : (
+          {q.isLoading ? (
+            <p>Carregando…</p>
+          ) : (
             <Table>
-              <TableHeader><TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>E-mail</TableHead>
-                <TableHead>Papéis</TableHead>
-                <TableHead>Ativo</TableHead>
-              </TableRow></TableHeader>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>E-mail</TableHead>
+                  <TableHead>Papéis</TableHead>
+                  <TableHead>Ativo</TableHead>
+                </TableRow>
+              </TableHeader>
               <TableBody>
-                {(q.data ?? []).map((u: any) => (
-                  <TableRow key={u.id}>
-                    <TableCell className="font-medium">{u.nome}</TableCell>
-                    <TableCell>{u.email}</TableCell>
+                {(q.data ?? []).map((u: Record<string, unknown>) => (
+                  <TableRow key={u.id as string}>
+                    <TableCell className="font-medium">{u.nome as string}</TableCell>
+                    <TableCell>{u.email as string}</TableCell>
                     <TableCell className="space-x-1">
-                      {u.roles.map((r: string) => <Badge key={r} variant="outline">{r}</Badge>)}
-                      {u.roles.length === 0 && <span className="text-muted-foreground text-sm">—</span>}
+                      {((u.roles as Array<string>) ?? []).map((r: string) => (
+                        <Badge key={r} variant="outline">
+                          {r}
+                        </Badge>
+                      ))}
+                      {((u.roles as Array<string>) ?? []).length === 0 && (
+                        <span className="text-muted-foreground text-sm">—</span>
+                      )}
                     </TableCell>
-                    <TableCell>{u.ativo ? "Sim" : "Não"}</TableCell>
+                    <TableCell>{(u.ativo as boolean) ? "Sim" : "Não"}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

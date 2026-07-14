@@ -4,11 +4,23 @@ import { cn } from "@/lib/utils";
 export type Urgencia = "vencido" | "critico_7" | "alerta_15" | "aviso_30" | "ok";
 
 const map: Record<Urgencia, { label: string; cls: string }> = {
-  vencido:    { label: "Vencido",       cls: "bg-urgency-overdue text-urgency-overdue-fg border-transparent" },
-  critico_7:  { label: "≤ 7 dias",       cls: "bg-urgency-critical text-urgency-critical-fg border-transparent" },
-  alerta_15:  { label: "≤ 15 dias",      cls: "bg-urgency-warning text-urgency-warning-fg border-transparent" },
-  aviso_30:   { label: "≤ 30 dias",      cls: "bg-urgency-notice text-urgency-notice-fg border-transparent" },
-  ok:         { label: "Em dia",         cls: "bg-urgency-ok text-urgency-ok-fg border-transparent" },
+  vencido: {
+    label: "Vencido",
+    cls: "bg-urgency-overdue text-urgency-overdue-fg border-transparent",
+  },
+  critico_7: {
+    label: "≤ 7 dias",
+    cls: "bg-urgency-critical text-urgency-critical-fg border-transparent",
+  },
+  alerta_15: {
+    label: "≤ 15 dias",
+    cls: "bg-urgency-warning text-urgency-warning-fg border-transparent",
+  },
+  aviso_30: {
+    label: "≤ 30 dias",
+    cls: "bg-urgency-notice text-urgency-notice-fg border-transparent",
+  },
+  ok: { label: "Em dia", cls: "bg-urgency-ok text-urgency-ok-fg border-transparent" },
 };
 
 export function UrgencyBadge({ urgencia, className }: { urgencia: Urgencia; className?: string }) {
@@ -27,7 +39,9 @@ const statusLabels: Record<string, string> = {
   encerrado: "Encerrado",
   reprovado: "Reprovado",
 };
-export function statusProjetoLabel(s: string) { return statusLabels[s] ?? s; }
+export function statusProjetoLabel(s: string) {
+  return statusLabels[s] ?? s;
+}
 
 const tipoMarcoLabels: Record<string, string> = {
   relatorio_tecnico: "Relatório técnico",
@@ -35,7 +49,9 @@ const tipoMarcoLabels: Record<string, string> = {
   prestacao_contas_parcial: "Prestação de contas parcial",
   prestacao_contas_final: "Prestação de contas final",
 };
-export function tipoMarcoLabel(s: string) { return tipoMarcoLabels[s] ?? s; }
+export function tipoMarcoLabel(s: string) {
+  return tipoMarcoLabels[s] ?? s;
+}
 
 const categoriaEditalLabels: Record<string, string> = {
   subvencao_economica: "Subvenção Econômica",
@@ -43,7 +59,9 @@ const categoriaEditalLabels: Record<string, string> = {
   RHAE: "RHAE",
   outro: "Outro",
 };
-export function categoriaEditalLabel(s: string) { return categoriaEditalLabels[s] ?? s; }
+export function categoriaEditalLabel(s: string) {
+  return categoriaEditalLabels[s] ?? s;
+}
 
 const tipoInteracaoLabels: Record<string, string> = {
   reuniao: "Reunião",
@@ -55,7 +73,9 @@ const tipoInteracaoLabels: Record<string, string> = {
   nota: "Nota",
   documento: "Documento",
 };
-export function tipoInteracaoLabel(s: string) { return tipoInteracaoLabels[s] ?? s; }
+export function tipoInteracaoLabel(s: string) {
+  return tipoInteracaoLabels[s] ?? s;
+}
 
 export function formatBRL(v: number | string | null | undefined) {
   if (v === null || v === undefined || v === "") return "—";
@@ -77,7 +97,9 @@ const tipoDocumentoLabels: Record<string, string> = {
   relatorio: "Relatórios",
   outro: "Outros",
 };
-export function tipoDocumentoLabel(s: string) { return tipoDocumentoLabels[s] ?? s; }
+export function tipoDocumentoLabel(s: string) {
+  return tipoDocumentoLabels[s] ?? s;
+}
 export const tiposDocumento = ["material", "contrato", "aditivo", "relatorio", "outro"] as const;
 
 export function formatFileSize(bytes: number | null | undefined) {

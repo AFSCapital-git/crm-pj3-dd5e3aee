@@ -104,9 +104,9 @@ GRANT ALL ON public.emails_nao_vinculados TO service_role;
 
 ALTER TABLE public.emails_nao_vinculados ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "emails_nao_vinculados_authenticated_read"
+CREATE POLICY "emails_nao_vinculados_admin_read"
   ON public.emails_nao_vinculados FOR SELECT TO authenticated
-  USING (true);
+  USING (public.is_admin(auth.uid()));
 
 CREATE POLICY "emails_nao_vinculados_admin_manage"
   ON public.emails_nao_vinculados FOR ALL TO authenticated

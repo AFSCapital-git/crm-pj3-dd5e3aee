@@ -9,8 +9,7 @@ export const getCurrentUser = createServerFn({ method: "GET" })
       supabase.from("usuarios_internos").select("*").eq("id", userId).maybeSingle(),
       supabase.from("user_roles").select("role").eq("user_id", userId),
     ]);
-    const role = roles?.find((r) => r.role === "admin") ? "admin"
-      : roles?.[0]?.role ?? null;
+    const role = roles?.find((r) => r.role === "admin") ? "admin" : (roles?.[0]?.role ?? null);
     return {
       id: userId,
       nome: profile?.nome ?? "",

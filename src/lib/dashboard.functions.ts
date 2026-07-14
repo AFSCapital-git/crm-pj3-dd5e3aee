@@ -8,7 +8,8 @@ export const getDashboard = createServerFn({ method: "GET" })
 
     const [{ data: projetos }, { data: marcos }] = await Promise.all([
       supabase.from("projetos").select("id,status,valor_aprovado"),
-      supabase.from("marcos_com_urgencia")
+      supabase
+        .from("marcos_com_urgencia")
         .select("*")
         .neq("urgencia", "ok")
         .order("data_prevista", { ascending: true })
@@ -22,9 +23,24 @@ export const getDashboard = createServerFn({ method: "GET" })
     let valorCaptado = 0;
     let submetidos = 0;
     let aprovados = 0;
-    const ativosSet = new Set(["aprovado","contratado","em_execucao","em_prestacao_contas"]);
-    const submetidosSet = new Set(["submetido","em_analise","aprovado","contratado","em_execucao","em_prestacao_contas","encerrado","reprovado"]);
-    const aprovadosSet = new Set(["aprovado","contratado","em_execucao","em_prestacao_contas","encerrado"]);
+    const ativosSet = new Set(["aprovado", "contratado", "em_execucao", "em_prestacao_contas"]);
+    const submetidosSet = new Set([
+      "submetido",
+      "em_analise",
+      "aprovado",
+      "contratado",
+      "em_execucao",
+      "em_prestacao_contas",
+      "encerrado",
+      "reprovado",
+    ]);
+    const aprovadosSet = new Set([
+      "aprovado",
+      "contratado",
+      "em_execucao",
+      "em_prestacao_contas",
+      "encerrado",
+    ]);
 
     for (const p of projetosList) {
       statusCount[p.status] = (statusCount[p.status] ?? 0) + 1;
@@ -65,8 +81,11 @@ export const exportProjetosCsv = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const [{ data: projetos }, { data: marcos }] = await Promise.all([
-      context.supabase.from("projetos")
-        .select("id,nome_projeto,status,valor_solicitado,valor_aprovado,data_submissao,prazo_execucao_meses,empresa:empresa_cliente_id(razao_social,cnpj)"),
+      context.supabase
+        .from("projetos")
+        .select(
+          "id,nome_projeto,status,valor_solicitado,valor_aprovado,data_submissao,prazo_execucao_meses,empresa:empresa_cliente_id(razao_social,cnpj)",
+        ),
       context.supabase.from("marcos_com_urgencia").select("*"),
     ]);
 
@@ -76,17 +95,50 @@ export const exportProjetosCsv = createServerFn({ method: "GET" })
       return /[",\n;]/.test(s) ? `"${s}"` : s;
     };
 
-    const projHeader = ["ID","Projeto","Empresa","CNPJ","Status","Valor Solicitado","Valor Aprovado","Data Submissão","Prazo (meses)"];
-    const projRows = (projetos ?? []).map((p: any) => [
-      p.id, p.nome_projeto, p.empresa?.razao_social ?? "", p.empresa?.cnpj ?? "",
-      p.status, p.valor_solicitado ?? "", p.valor_aprovado ?? "",
-      p.data_submissao ?? "", p.prazo_execucao_meses ?? "",
+    const projHeader = [
+      "ID",
+      "Projeto",
+      "Empresa",
+      "CNPJ",
+      "Status",
+      "Valor Solicitado",
+      "Valor Aprovado",
+      "Data Submissão",
+      "Prazo (meses)",
+    ];
+    const projRows = (projetos ?? []).map((p: Record<string, unknown>) => [
+      p.id,
+      p.nome_projeto,
+      (p.empresa as Record<string, unknown> | undefined)?.razao_social ?? "",
+      (p.empresa as Record<string, unknown> | undefined)?.cnpj ?? "",
+      p.status,
+      p.valor_solicitado ?? "",
+      p.valor_aprovado ?? "",
+      p.data_submissao ?? "",
+      p.prazo_execucao_meses ?? "",
     ]);
 
-    const marcoHeader = ["Projeto ID","Projeto","Empresa","Tipo","Data Prevista","Data Entrega Real","Status","Urgência","Dias p/ vencer"];
-    const marcoRows = (marcos ?? []).map((m: any) => [
-      m.projeto_id, m.nome_projeto, m.empresa_razao_social, m.tipo,
-      m.data_prevista, m.data_entrega_real ?? "", m.status, m.urgencia, m.dias_para_vencer,
+    const marcoHeader = [
+      "Projeto ID",
+      "Projeto",
+      "Empresa",
+      "Tipo",
+      "Data Prevista",
+      "Data Entrega Real",
+      "Status",
+      "Urgência",
+      "Dias p/ vencer",
+    ];
+    const marcoRows = (marcos ?? []).map((m: Record<string, unknown>) => [
+      m.projeto_id,
+      m.nome_projeto,
+      m.empresa_razao_social,
+      m.tipo,
+      m.data_prevista,
+      m.data_entrega_real ?? "",
+      m.status,
+      m.urgencia,
+      m.dias_para_vencer,
     ]);
 
     const csv =
@@ -95,7 +147,7 @@ export const exportProjetosCsv = createServerFn({ method: "GET" })
       "\n\nMARCOS/ENTREGAS\n" +
       [marcoHeader, ...marcoRows].map((r) => r.map(esc).join(",")).join("\n");
 
-    return { csv, filename: `gestorfinep-${new Date().toISOString().slice(0,10)}.csv` };
+    return { csv, filename: `gestorfinep-${new Date().toISOString().slice(0, 10)}.csv` };
   });
 
 export const listUsuarios = createServerFn({ method: "GET" })

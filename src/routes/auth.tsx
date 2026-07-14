@@ -70,32 +70,67 @@ function AuthPage() {
               <form onSubmit={handleLogin} className="space-y-4 pt-4">
                 <div>
                   <Label htmlFor="email">E-mail</Label>
-                  <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
                 </div>
                 <div>
                   <Label htmlFor="password">Senha</Label>
-                  <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>Entrar</Button>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  Entrar
+                </Button>
               </form>
             </TabsContent>
             <TabsContent value="signup">
               <form onSubmit={handleSignup} className="space-y-4 pt-4">
                 <div>
                   <Label htmlFor="nome">Nome completo</Label>
-                  <Input id="nome" value={nome} onChange={(e) => setNome(e.target.value)} required />
+                  <Input
+                    id="nome"
+                    value={nome}
+                    onChange={(e) => setNome(e.target.value)}
+                    required
+                  />
                 </div>
                 <div>
                   <Label htmlFor="email2">E-mail</Label>
-                  <Input id="email2" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                  <Input
+                    id="email2"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
                 </div>
                 <div>
                   <Label htmlFor="password2">Senha</Label>
-                  <Input id="password2" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
+                  <Input
+                    id="password2"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={6}
+                  />
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>Criar conta</Button>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  Criar conta
+                </Button>
                 <p className="text-xs text-muted-foreground text-center">
-                  O primeiro usuário criado vira admin automaticamente. Os demais entram como consultor.
+                  O primeiro usuário criado vira admin automaticamente. Os demais entram como
+                  consultor.
                 </p>
               </form>
             </TabsContent>

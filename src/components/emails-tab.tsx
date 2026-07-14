@@ -8,7 +8,13 @@ import { Badge } from "@/components/ui/badge";
 import { listEmailsProjeto, simularReencaminhamento } from "@/lib/emails.functions";
 import { INBOUND_EMAIL_ADDRESS } from "@/lib/inbound-email";
 
-export function EmailsTab({ projetoId, codigoRastreio }: { projetoId: string; codigoRastreio: string }) {
+export function EmailsTab({
+  projetoId,
+  codigoRastreio,
+}: {
+  projetoId: string;
+  codigoRastreio: string;
+}) {
   const listFn = useServerFn(listEmailsProjeto);
   const simularFn = useServerFn(simularReencaminhamento);
   const qc = useQueryClient();
@@ -18,19 +24,25 @@ export function EmailsTab({ projetoId, codigoRastreio }: { projetoId: string; co
   });
 
   const simular = useMutation({
-    mutationFn: () => simularFn({ data: { projeto_id: projetoId, codigo_rastreio: codigoRastreio } }),
-    onSuccess: (res: any) => {
-      const s1 = res.first?.status;
-      const s2 = res.second?.status;
+    mutationFn: () =>
+      simularFn({ data: { projeto_id: projetoId, codigo_rastreio: codigoRastreio } }),
+    onSuccess: (res: Record<string, unknown>) => {
+      const first = res.first as Record<string, unknown> | undefined;
+      const second = res.second as Record<string, unknown> | undefined;
+      const s1 = first?.status as string | undefined;
+      const s2 = second?.status as string | undefined;
       const short = String(res.dedup_hash ?? "").slice(0, 12);
       toast.success(
         `Dedup OK — 1ª tentativa: ${s1 === "linked" ? "criado" : "duplicado"} · 2ª tentativa: ${s2 === "duplicate" ? "duplicado (ignorado)" : "criado"}`,
-        { description: `hash ${short}…` }
+        { description: `hash ${short}…` },
       );
       qc.invalidateQueries({ queryKey: ["emails-projeto", projetoId] });
       qc.invalidateQueries({ queryKey: ["interacoes", projetoId] });
     },
-    onError: (e: any) => toast.error(e?.message ?? "Falha na simulação"),
+    onError: (e: unknown) => {
+      const error = e as Record<string, unknown>;
+      toast.error((error?.message as string | undefined) ?? "Falha na simulação");
+    },
   });
 
   const instrucao = `Para vincular um e-mail a este projeto, encaminhe para ${INBOUND_EMAIL_ADDRESS} incluindo ${codigoRastreio} no assunto.`;
@@ -38,14 +50,30 @@ export function EmailsTab({ projetoId, codigoRastreio }: { projetoId: string; co
   return (
     <div className="space-y-4">
       <Card>
-        <CardHeader><CardTitle className="text-base">Código de rastreio</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-base">Código de rastreio</CardTitle>
+        </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex flex-wrap items-center gap-3">
             <code className="text-lg font-mono px-3 py-1.5 rounded bg-muted">{codigoRastreio}</code>
-            <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(codigoRastreio); toast.success("Código copiado"); }}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                navigator.clipboard.writeText(codigoRastreio);
+                toast.success("Código copiado");
+              }}
+            >
               <Copy className="h-3.5 w-3.5 mr-1" /> Copiar código
             </Button>
-            <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(INBOUND_EMAIL_ADDRESS); toast.success("Endereço copiado"); }}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                navigator.clipboard.writeText(INBOUND_EMAIL_ADDRESS);
+                toast.success("Endereço copiado");
+              }}
+            >
               <Copy className="h-3.5 w-3.5 mr-1" /> Copiar endereço
             </Button>
           </div>
@@ -63,32 +91,44 @@ export function EmailsTab({ projetoId, codigoRastreio }: { projetoId: string; co
         <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">
             Cada e-mail recebe um <code className="text-xs">SHA-256</code> calculado sobre o
-            <code className="text-xs mx-1">message_id</code> (ou remetente + assunto + data + corpo, quando ausente).
-            Um índice único em <code className="text-xs">(projeto_id, dedup_hash)</code> impede que reencaminhamentos
-            do mesmo e-mail criem registros duplicados. O hash de cada mensagem aparece abaixo como badge.
+            <code className="text-xs mx-1">message_id</code> (ou remetente + assunto + data + corpo,
+            quando ausente). Um índice único em{" "}
+            <code className="text-xs">(projeto_id, dedup_hash)</code> impede que reencaminhamentos
+            do mesmo e-mail criem registros duplicados. O hash de cada mensagem aparece abaixo como
+            badge.
           </p>
           <Button size="sm" onClick={() => simular.mutate()} disabled={simular.isPending}>
-            {simular.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5 mr-1" />}
+            {simular.isPending ? (
+              <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+            ) : (
+              <ShieldCheck className="h-3.5 w-3.5 mr-1" />
+            )}
             Simular reencaminhamento (2×)
           </Button>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">E-mails vinculados ({q.data?.length ?? 0})</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-base">E-mails vinculados ({q.data?.length ?? 0})</CardTitle>
+        </CardHeader>
         <CardContent>
           {q.isLoading && <p className="text-sm text-muted-foreground">Carregando…</p>}
           {!q.isLoading && (q.data?.length ?? 0) === 0 && (
             <p className="text-sm text-muted-foreground">Nenhum e-mail encaminhado ainda.</p>
           )}
           <div className="divide-y">
-            {q.data?.map((e: any) => (
-              <div key={e.id} className="py-3">
+            {q.data?.map((e: Record<string, unknown>) => (
+              <div key={e.id as string} className="py-3">
                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                   <Mail className="h-3.5 w-3.5" />
                   <span className="font-medium text-foreground">{e.remetente_original}</span>
                   <span>·</span>
-                  <span>{e.data_email_original ? new Date(e.data_email_original).toLocaleString("pt-BR") : new Date(e.criado_em).toLocaleString("pt-BR")}</span>
+                  <span>
+                    {e.data_email_original
+                      ? new Date(e.data_email_original).toLocaleString("pt-BR")
+                      : new Date(e.criado_em).toLocaleString("pt-BR")}
+                  </span>
                   {Array.isArray(e.anexos_referenciados) && e.anexos_referenciados.length > 0 && (
                     <Badge variant="outline">{e.anexos_referenciados.length} anexo(s)</Badge>
                   )}
@@ -97,7 +137,10 @@ export function EmailsTab({ projetoId, codigoRastreio }: { projetoId: string; co
                       variant="secondary"
                       className="font-mono cursor-pointer"
                       title={`Clique para copiar o hash completo\n${e.dedup_hash}`}
-                      onClick={() => { navigator.clipboard.writeText(e.dedup_hash); toast.success("Hash copiado"); }}
+                      onClick={() => {
+                        navigator.clipboard.writeText(e.dedup_hash);
+                        toast.success("Hash copiado");
+                      }}
                     >
                       hash {String(e.dedup_hash).slice(0, 10)}…
                     </Badge>
@@ -105,7 +148,9 @@ export function EmailsTab({ projetoId, codigoRastreio }: { projetoId: string; co
                 </div>
                 <p className="font-medium mt-1">{e.assunto || "(sem assunto)"}</p>
                 {e.corpo_texto && (
-                  <p className="text-sm mt-1 whitespace-pre-wrap text-muted-foreground line-clamp-6">{e.corpo_texto}</p>
+                  <p className="text-sm mt-1 whitespace-pre-wrap text-muted-foreground line-clamp-6">
+                    {e.corpo_texto}
+                  </p>
                 )}
               </div>
             ))}

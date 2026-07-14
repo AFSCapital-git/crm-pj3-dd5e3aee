@@ -2,6 +2,24 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createHash, timingSafeEqual } from "crypto";
 import { CODIGO_RASTREIO_REGEX } from "@/lib/inbound-email";
 
+interface InboundEmailPayload {
+  from?: string;
+  sender?: string;
+  subject?: string;
+  text?: string;
+  body?: string;
+  body_text?: string;
+  date?: string;
+  timestamp?: string;
+  message_id?: string;
+  messageId?: string;
+  attachments?: unknown[];
+}
+
+interface DatabaseError extends Error {
+  code?: string;
+}
+
 // Corpo esperado (JSON):
 // {
 //   "from": "fulano@empresa.com",
@@ -48,7 +66,9 @@ export const Route = createFileRoute("/api/public/inbound-email")({
       POST: async ({ request }) => {
         const secret = process.env.INBOUND_EMAIL_SECRET;
         if (!secret) {
-          return new Response("Server misconfigured: INBOUND_EMAIL_SECRET missing", { status: 500 });
+          return new Response("Server misconfigured: INBOUND_EMAIL_SECRET missing", {
+            status: 500,
+          });
         }
         const auth = request.headers.get("authorization") ?? "";
         const provided = auth.replace(/^Bearer\s+/i, "");
@@ -56,9 +76,9 @@ export const Route = createFileRoute("/api/public/inbound-email")({
           return new Response("Unauthorized", { status: 401 });
         }
 
-        let payload: any;
+        let payload: InboundEmailPayload;
         try {
-          payload = await request.json();
+          payload = (await request.json()) as InboundEmailPayload;
         } catch {
           return new Response("Invalid JSON", { status: 400 });
         }
@@ -77,8 +97,12 @@ export const Route = createFileRoute("/api/public/inbound-email")({
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-        const isDup = (err: any) =>
-          err && (err.code === "23505" || String(err.message ?? "").toLowerCase().includes("duplicate"));
+        const isDup = (err: DatabaseError | null) =>
+          err &&
+          (err.code === "23505" ||
+            String(err.message ?? "")
+              .toLowerCase()
+              .includes("duplicate"));
 
         if (code) {
           const { data: projeto } = await supabaseAdmin
@@ -112,15 +136,20 @@ export const Route = createFileRoute("/api/public/inbound-email")({
                 assunto: subject || null,
                 corpo_texto: text || null,
                 data_email_original: date,
-                anexos_referenciados: attachments,
+                anexos_referenciados: attachments as unknown[],
                 message_id: messageId,
                 dedup_hash: hash,
-              } as any)
+              })
               .select("id")
               .maybeSingle();
             if (error) {
               if (isDup(error)) {
-                return Response.json({ status: "duplicate", codigo: code, projeto_id: projeto.id, dedup_hash: hash });
+                return Response.json({
+                  status: "duplicate",
+                  codigo: code,
+                  projeto_id: projeto.id,
+                  dedup_hash: hash,
+                });
               }
               console.error("inbound-email insert error", error);
               return new Response("DB error", { status: 500 });
@@ -140,13 +169,18 @@ export const Route = createFileRoute("/api/public/inbound-email")({
             assunto: subject || null,
             corpo_texto: text || null,
             data_email_original: date,
-            anexos_referenciados: attachments,
+            anexos_referenciados: attachments as unknown[],
             message_id: messageId,
             dedup_hash: hash,
             motivo: `codigo_invalido:${code}`,
-          } as any);
+          });
           if (errQ && isDup(errQ)) {
-            return Response.json({ status: "duplicate", codigo: code, dedup_hash: hash, queue: true });
+            return Response.json({
+              status: "duplicate",
+              codigo: code,
+              dedup_hash: hash,
+              queue: true,
+            });
           }
           return Response.json({ status: "unmatched", codigo: code, dedup_hash: hash });
         }
@@ -157,11 +191,11 @@ export const Route = createFileRoute("/api/public/inbound-email")({
           assunto: subject || null,
           corpo_texto: text || null,
           data_email_original: date,
-          anexos_referenciados: attachments,
+          anexos_referenciados: attachments as unknown[],
           message_id: messageId,
           dedup_hash: hash,
           motivo: "codigo_ausente",
-        } as any);
+        });
         if (errQ2 && isDup(errQ2)) {
           return Response.json({ status: "duplicate", dedup_hash: hash, queue: true });
         }

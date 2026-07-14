@@ -41,10 +41,12 @@ export const getEmpresa = createServerFn({ method: "GET" })
 export const upsertEmpresa = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => {
-    const parsed = z.object({
-      id: z.string().uuid().optional(),
-      values: empresaSchema,
-    }).parse(d);
+    const parsed = z
+      .object({
+        id: z.string().uuid().optional(),
+        values: empresaSchema,
+      })
+      .parse(d);
     return parsed;
   })
   .handler(async ({ data, context }) => {
@@ -54,12 +56,19 @@ export const upsertEmpresa = createServerFn({ method: "POST" })
     };
     if (data.id) {
       const { data: row, error } = await context.supabase
-        .from("empresas_clientes").update(values).eq("id", data.id).select().single();
+        .from("empresas_clientes")
+        .update(values)
+        .eq("id", data.id)
+        .select()
+        .single();
       if (error) throw error;
       return row;
     }
     const { data: row, error } = await context.supabase
-      .from("empresas_clientes").insert(values).select().single();
+      .from("empresas_clientes")
+      .insert(values)
+      .select()
+      .single();
     if (error) throw error;
     return row;
   });

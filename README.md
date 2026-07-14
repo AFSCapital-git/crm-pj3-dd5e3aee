@@ -39,14 +39,14 @@ CRM interno para consultorias que gerenciam projetos de financiamento **FINEP** 
 
 Geradas automaticamente pelo Lovable Cloud — não é necessário configurar manualmente:
 
-| Nome | Onde |
-| --- | --- |
-| `VITE_SUPABASE_URL` | Browser |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | Browser |
-| `VITE_SUPABASE_PROJECT_ID` | Browser |
-| `SUPABASE_URL` | Server |
-| `SUPABASE_PUBLISHABLE_KEY` | Server |
-| `SUPABASE_SERVICE_ROLE_KEY` | Server (não usada diretamente — reservada para operações administrativas) |
+| Nome                            | Onde                                                                      |
+| ------------------------------- | ------------------------------------------------------------------------- |
+| `VITE_SUPABASE_URL`             | Browser                                                                   |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Browser                                                                   |
+| `VITE_SUPABASE_PROJECT_ID`      | Browser                                                                   |
+| `SUPABASE_URL`                  | Server                                                                    |
+| `SUPABASE_PUBLISHABLE_KEY`      | Server                                                                    |
+| `SUPABASE_SERVICE_ROLE_KEY`     | Server (não usada diretamente — reservada para operações administrativas) |
 
 ## Desenvolvimento
 

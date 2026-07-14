@@ -47,30 +47,26 @@ export const registerDocumentoVersion = createServerFn({ method: "POST" })
         mime_type: z.string().max(255).nullable().optional(),
         descricao_da_versao: z.string().max(1000).optional().default(""),
       })
-      .refine(
-        (v) => Boolean(v.projeto_id) !== Boolean(v.empresa_cliente_id),
-        { message: "Informe exatamente um: projeto_id ou empresa_cliente_id" },
-      )
+      .refine((v) => Boolean(v.projeto_id) !== Boolean(v.empresa_cliente_id), {
+        message: "Informe exatamente um: projeto_id ou empresa_cliente_id",
+      })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
     if (data.grupo_documento_id) {
-      const { data: row, error } = await supabase.rpc(
-        "registrar_nova_versao_documento",
-        {
-          _projeto_id: (data.projeto_id ?? null) as unknown as string,
-          _empresa_cliente_id: (data.empresa_cliente_id ?? null) as unknown as string,
-          _grupo_documento_id: data.grupo_documento_id,
-          _tipo: data.tipo,
-          _nome_arquivo: data.nome_arquivo,
-          _storage_path: data.storage_path,
-          _tamanho_arquivo: data.tamanho_arquivo,
-          _mime_type: data.mime_type ?? "",
-          _descricao: data.descricao_da_versao ?? "",
-        },
-      );
+      const { data: row, error } = await supabase.rpc("registrar_nova_versao_documento", {
+        _projeto_id: (data.projeto_id ?? null) as unknown as string,
+        _empresa_cliente_id: (data.empresa_cliente_id ?? null) as unknown as string,
+        _grupo_documento_id: data.grupo_documento_id,
+        _tipo: data.tipo,
+        _nome_arquivo: data.nome_arquivo,
+        _storage_path: data.storage_path,
+        _tamanho_arquivo: data.tamanho_arquivo,
+        _mime_type: data.mime_type ?? "",
+        _descricao: data.descricao_da_versao ?? "",
+      });
       if (error) throw error;
       return row;
     }

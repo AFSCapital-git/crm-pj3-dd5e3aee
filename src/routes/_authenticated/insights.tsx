@@ -18,8 +18,8 @@ function InsightsPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Assistente de Portfólio</h1>
         <p className="text-sm text-muted-foreground">
-          Análises, alertas e sugestões geradas por IA sobre o portfólio de projetos ativos.
-          Nenhuma sugestão vira ação sem aprovação humana explícita.
+          Análises, alertas e sugestões geradas por IA sobre o portfólio de projetos ativos. Nenhuma
+          sugestão vira ação sem aprovação humana explícita.
         </p>
       </div>
       <AiInsightsPanel isAdmin={isAdmin} />

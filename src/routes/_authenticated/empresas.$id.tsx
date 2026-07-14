@@ -22,19 +22,24 @@ function EmpresaDetailPage() {
   });
 
   if (q.isLoading) return <p className="text-sm text-muted-foreground">Carregando…</p>;
-  const e: any = q.data;
+  const e: Record<string, unknown> = q.data as Record<string, unknown>;
   if (!e) return <p className="text-sm text-muted-foreground">Empresa não encontrada.</p>;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <Button asChild size="icon" variant="ghost">
-          <Link to="/empresas"><ArrowLeft className="h-4 w-4" /></Link>
+          <Link to="/empresas">
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
         </Button>
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{e.razao_social}</h1>
           <p className="text-sm text-muted-foreground">
-            {e.cnpj} · {e.porte} · <Badge variant="outline" className="ml-1">{e.status}</Badge>
+            {e.cnpj} · {e.porte} ·{" "}
+            <Badge variant="outline" className="ml-1">
+              {e.status}
+            </Badge>
           </p>
         </div>
       </div>
@@ -47,7 +52,9 @@ function EmpresaDetailPage() {
 
         <TabsContent value="dados">
           <Card>
-            <CardHeader><CardTitle>Informações</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Informações</CardTitle>
+            </CardHeader>
             <CardContent className="grid gap-3 md:grid-cols-2 text-sm">
               <Info label="Setor" value={e.setor_atuacao} />
               <Info label="Contato" value={e.contato_responsavel} />

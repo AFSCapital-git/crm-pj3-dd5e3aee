@@ -31,13 +31,13 @@ export const listEmailsPendentes = createServerFn({ method: "GET" })
 export const vincularEmailManual = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({ pendente_id: z.string().uuid(), projeto_id: z.string().uuid() }).parse(d)
+    z.object({ pendente_id: z.string().uuid(), projeto_id: z.string().uuid() }).parse(d),
   )
   .handler(async ({ data, context }) => {
     const { data: row, error } = await context.supabase.rpc("vincular_email_manual", {
       _pendente_id: data.pendente_id,
       _projeto_id: data.projeto_id,
-    } as any);
+    } as Record<string, unknown>);
     if (error) throw error;
     return row;
   });
@@ -59,14 +59,14 @@ export const descartarEmailPendente = createServerFn({ method: "POST" })
 export const simularReencaminhamento = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({ projeto_id: z.string().uuid(), codigo_rastreio: z.string().min(3) }).parse(d)
+    z.object({ projeto_id: z.string().uuid(), codigo_rastreio: z.string().min(3) }).parse(d),
   )
   .handler(async ({ data, context }) => {
     // Só admin pode simular (evita ruído no histórico real).
     const { data: isAdmin } = await context.supabase.rpc("has_role", {
       _user_id: context.userId,
       _role: "admin",
-    } as any);
+    } as Record<string, unknown>);
     if (!isAdmin) throw new Error("Apenas administradores podem simular reencaminhamento");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -100,13 +100,16 @@ export const simularReencaminhamento = createServerFn({ method: "POST" })
       if (existing.data) return { status: "duplicate" as const, email_id: existing.data.id };
       const ins = await supabaseAdmin
         .from("emails_vinculados")
-        .insert(payload as any)
+        .insert(payload as Record<string, unknown>)
         .select("id")
         .maybeSingle();
       if (ins.error) {
+        const errorObj = ins.error as unknown as Record<string, unknown>;
         const dup =
-          (ins.error as any).code === "23505" ||
-          String(ins.error.message ?? "").toLowerCase().includes("duplicate");
+          errorObj.code === "23505" ||
+          String(ins.error.message ?? "")
+            .toLowerCase()
+            .includes("duplicate");
         if (dup) return { status: "duplicate" as const };
         throw ins.error;
       }
