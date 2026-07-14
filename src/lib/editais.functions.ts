@@ -18,7 +18,8 @@ export const listEditais = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("linhas_editais_finep")
       .select("*")
-      .order("prazo_submissao", { ascending: true, nullsFirst: false });
+      .order("prazo_submissao", { ascending: true, nullsFirst: false })
+      .limit(500);
     if (error) throw error;
     return data;
   });

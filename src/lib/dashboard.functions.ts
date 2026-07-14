@@ -72,7 +72,8 @@ export const getCronograma = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("marcos_com_urgencia")
       .select("*")
-      .order("data_prevista", { ascending: true });
+      .order("data_prevista", { ascending: true })
+      .limit(1000);
     if (error) throw error;
     return data ?? [];
   });
@@ -154,8 +155,8 @@ export const listUsuarios = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const [{ data: users }, { data: roles }] = await Promise.all([
-      context.supabase.from("usuarios_internos").select("*").order("nome"),
-      context.supabase.from("user_roles").select("user_id,role"),
+      context.supabase.from("usuarios_internos").select("*").order("nome").limit(100),
+      context.supabase.from("user_roles").select("user_id,role").limit(500),
     ]);
     const byUser: Record<string, string[]> = {};
     for (const r of roles ?? []) {
