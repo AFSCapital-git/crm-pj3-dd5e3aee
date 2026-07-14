@@ -19,6 +19,7 @@ import { upsertMarco, marcarEntregue, deleteMarco, createInteracao } from "@/lib
 import { UrgencyBadge, formatBRL, formatDate, statusProjetoLabel, tipoMarcoLabel, tipoInteracaoLabel } from "@/lib/labels";
 import { DocumentosTab } from "@/components/documentos-tab";
 import { EmailsTab } from "@/components/emails-tab";
+import { AiInsightsPanel } from "@/components/ai-insights-panel";
 
 export const Route = createFileRoute("/_authenticated/projetos/$id")({
   component: ProjetoDetail,
@@ -79,6 +80,7 @@ function ProjetoDetail() {
           <TabsTrigger value="documentos">Documentos</TabsTrigger>
           <TabsTrigger value="emails">E-mails</TabsTrigger>
           <TabsTrigger value="timeline">Linha do tempo ({interacoes.length})</TabsTrigger>
+          <TabsTrigger value="ia">Assistente IA</TabsTrigger>
         </TabsList>
 
 
@@ -173,6 +175,10 @@ function ProjetoDetail() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="ia">
+          <AiInsightsPanel projetoId={id} />
         </TabsContent>
       </Tabs>
     </div>
