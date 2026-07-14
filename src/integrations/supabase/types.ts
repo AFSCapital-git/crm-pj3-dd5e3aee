@@ -229,6 +229,68 @@ export type Database = {
           },
         ]
       }
+      insights_ia: {
+        Row: {
+          aprovado: boolean
+          conteudo_gerado: string
+          created_at: string
+          gerado_em: string
+          gerado_por: string | null
+          id: string
+          input_resumo: Json | null
+          modelo: string | null
+          projeto_id: string | null
+          revisado_em: string | null
+          revisado_por: string | null
+          revisado_por_humano: boolean
+          tipo: Database["public"]["Enums"]["tipo_insight_ia"]
+          titulo: string | null
+          updated_at: string
+        }
+        Insert: {
+          aprovado?: boolean
+          conteudo_gerado: string
+          created_at?: string
+          gerado_em?: string
+          gerado_por?: string | null
+          id?: string
+          input_resumo?: Json | null
+          modelo?: string | null
+          projeto_id?: string | null
+          revisado_em?: string | null
+          revisado_por?: string | null
+          revisado_por_humano?: boolean
+          tipo: Database["public"]["Enums"]["tipo_insight_ia"]
+          titulo?: string | null
+          updated_at?: string
+        }
+        Update: {
+          aprovado?: boolean
+          conteudo_gerado?: string
+          created_at?: string
+          gerado_em?: string
+          gerado_por?: string | null
+          id?: string
+          input_resumo?: Json | null
+          modelo?: string | null
+          projeto_id?: string | null
+          revisado_em?: string | null
+          revisado_por?: string | null
+          revisado_por_humano?: boolean
+          tipo?: Database["public"]["Enums"]["tipo_insight_ia"]
+          titulo?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "insights_ia_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       interacoes: {
         Row: {
           created_at: string
@@ -667,6 +729,7 @@ export type Database = {
         | "aditivo"
         | "relatorio"
         | "outro"
+      tipo_insight_ia: "alerta_risco" | "sugestao" | "rascunho_relatorio"
       tipo_interacao:
         | "reuniao"
         | "email"
@@ -830,6 +893,7 @@ export const Constants = {
         "reprovado",
       ],
       tipo_documento: ["material", "contrato", "aditivo", "relatorio", "outro"],
+      tipo_insight_ia: ["alerta_risco", "sugestao", "rascunho_relatorio"],
       tipo_interacao: [
         "reuniao",
         "email",
