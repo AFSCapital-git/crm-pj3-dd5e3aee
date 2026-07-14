@@ -59,7 +59,7 @@ function EmpresasPage() {
             <EmpresaForm
               initial={editing}
               usuarios={qUsers.data ?? []}
-              onSubmit={(values) => mUpsert.mutate({ id: editing?.id, values })}
+              onSubmit={(values: any) => mUpsert.mutate({ id: editing?.id, values })}
               loading={mUpsert.isPending}
             />
           </DialogContent>

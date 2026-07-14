@@ -54,7 +54,7 @@ function EditaisPage() {
           <DialogTrigger asChild><Button><Plus className="mr-2 h-4 w-4" />Novo edital</Button></DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>{editing ? "Editar edital" : "Novo edital"}</DialogTitle></DialogHeader>
-            <EditalForm initial={editing} onSubmit={(v) => mUpsert.mutate({ id: editing?.id, values: v })} loading={mUpsert.isPending} />
+            <EditalForm initial={editing} onSubmit={(v: any) => mUpsert.mutate({ id: editing?.id, values: v })} loading={mUpsert.isPending} />
           </DialogContent>
         </Dialog>
       </div>
