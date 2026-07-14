@@ -77,6 +77,9 @@ export const Route = createFileRoute("/api/public/inbound-email")({
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
+        const isDup = (err: any) =>
+          err && (err.code === "23505" || String(err.message ?? "").toLowerCase().includes("duplicate"));
+
         if (code) {
           const { data: projeto } = await supabaseAdmin
             .from("projetos")
@@ -85,43 +88,54 @@ export const Route = createFileRoute("/api/public/inbound-email")({
             .maybeSingle();
 
           if (projeto) {
-            const { error } = await supabaseAdmin.from("emails_vinculados").insert({
-              projeto_id: projeto.id,
-              remetente_original: from,
-              assunto: subject || null,
-              corpo_texto: text || null,
-              data_email_original: date,
-              anexos_referenciados: attachments,
-              message_id: messageId,
-              dedup_hash: hash,
-            } as any);
-            if (error && !String(error.message).includes("duplicate")) {
+            // Dedup transparente: checa antes para responder explicitamente
+            const { data: existing } = await supabaseAdmin
+              .from("emails_vinculados")
+              .select("id")
+              .eq("projeto_id", projeto.id)
+              .eq("dedup_hash", hash)
+              .maybeSingle();
+            if (existing) {
+              return Response.json({
+                status: "duplicate",
+                codigo: code,
+                projeto_id: projeto.id,
+                dedup_hash: hash,
+                email_id: existing.id,
+              });
+            }
+            const { data: inserted, error } = await supabaseAdmin
+              .from("emails_vinculados")
+              .insert({
+                projeto_id: projeto.id,
+                remetente_original: from,
+                assunto: subject || null,
+                corpo_texto: text || null,
+                data_email_original: date,
+                anexos_referenciados: attachments,
+                message_id: messageId,
+                dedup_hash: hash,
+              } as any)
+              .select("id")
+              .maybeSingle();
+            if (error) {
+              if (isDup(error)) {
+                return Response.json({ status: "duplicate", codigo: code, projeto_id: projeto.id, dedup_hash: hash });
+              }
               console.error("inbound-email insert error", error);
               return new Response("DB error", { status: 500 });
             }
-            return Response.json({ status: "linked", codigo: code, projeto_id: projeto.id });
-          }
-          // código presente mas não corresponde a projeto → fila com motivo
-          await supabaseAdmin
-            .from("emails_nao_vinculados")
-            .insert({
-              remetente_original: from,
-              assunto: subject || null,
-              corpo_texto: text || null,
-              data_email_original: date,
-              anexos_referenciados: attachments,
-              message_id: messageId,
+            return Response.json({
+              status: "linked",
+              codigo: code,
+              projeto_id: projeto.id,
               dedup_hash: hash,
-              motivo: `codigo_invalido:${code}`,
-            } as any)
-            .then(() => {}, () => {});
-          return Response.json({ status: "unmatched", codigo: code });
-        }
+              email_id: inserted?.id,
+            });
+          }
 
-        // sem código → fila de revisão manual
-        await supabaseAdmin
-          .from("emails_nao_vinculados")
-          .insert({
+          // código presente mas não corresponde a projeto → fila com motivo
+          const { error: errQ } = await supabaseAdmin.from("emails_nao_vinculados").insert({
             remetente_original: from,
             assunto: subject || null,
             corpo_texto: text || null,
@@ -129,10 +143,29 @@ export const Route = createFileRoute("/api/public/inbound-email")({
             anexos_referenciados: attachments,
             message_id: messageId,
             dedup_hash: hash,
-            motivo: "codigo_ausente",
-          } as any)
-          .then(() => {}, () => {});
-        return Response.json({ status: "queued" });
+            motivo: `codigo_invalido:${code}`,
+          } as any);
+          if (errQ && isDup(errQ)) {
+            return Response.json({ status: "duplicate", codigo: code, dedup_hash: hash, queue: true });
+          }
+          return Response.json({ status: "unmatched", codigo: code, dedup_hash: hash });
+        }
+
+        // sem código → fila de revisão manual
+        const { error: errQ2 } = await supabaseAdmin.from("emails_nao_vinculados").insert({
+          remetente_original: from,
+          assunto: subject || null,
+          corpo_texto: text || null,
+          data_email_original: date,
+          anexos_referenciados: attachments,
+          message_id: messageId,
+          dedup_hash: hash,
+          motivo: "codigo_ausente",
+        } as any);
+        if (errQ2 && isDup(errQ2)) {
+          return Response.json({ status: "duplicate", dedup_hash: hash, queue: true });
+        }
+        return Response.json({ status: "queued", dedup_hash: hash });
       },
     },
   },

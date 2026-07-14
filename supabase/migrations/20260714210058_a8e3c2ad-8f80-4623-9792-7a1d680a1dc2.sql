@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS emails_vinculados_projeto_dedup_uidx ON public.emails_vinculados (projeto_id, dedup_hash);
