@@ -19,13 +19,14 @@ export type Database = {
           criado_em: string
           descricao_da_versao: string
           e_versao_atual: boolean
+          empresa_cliente_id: string | null
           enviado_por: string | null
           grupo_documento_id: string
           id: string
           mime_type: string | null
           nome_arquivo: string
           numero_versao: number
-          projeto_id: string
+          projeto_id: string | null
           storage_path: string
           tamanho_arquivo: number
           tipo: Database["public"]["Enums"]["tipo_documento"]
@@ -34,13 +35,14 @@ export type Database = {
           criado_em?: string
           descricao_da_versao?: string
           e_versao_atual?: boolean
+          empresa_cliente_id?: string | null
           enviado_por?: string | null
           grupo_documento_id: string
           id?: string
           mime_type?: string | null
           nome_arquivo: string
           numero_versao: number
-          projeto_id: string
+          projeto_id?: string | null
           storage_path: string
           tamanho_arquivo: number
           tipo: Database["public"]["Enums"]["tipo_documento"]
@@ -49,18 +51,26 @@ export type Database = {
           criado_em?: string
           descricao_da_versao?: string
           e_versao_atual?: boolean
+          empresa_cliente_id?: string | null
           enviado_por?: string | null
           grupo_documento_id?: string
           id?: string
           mime_type?: string | null
           nome_arquivo?: string
           numero_versao?: number
-          projeto_id?: string
+          projeto_id?: string | null
           storage_path?: string
           tamanho_arquivo?: number
           tipo?: Database["public"]["Enums"]["tipo_documento"]
         }
         Relationships: [
+          {
+            foreignKeyName: "documentos_empresa_cliente_id_fkey"
+            columns: ["empresa_cliente_id"]
+            isOneToOne: false
+            referencedRelation: "empresas_clientes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "documentos_enviado_por_fkey"
             columns: ["enviado_por"]
@@ -446,39 +456,76 @@ export type Database = {
         Args: { _projeto_id: string; _user_id: string }
         Returns: boolean
       }
-      registrar_nova_versao_documento: {
-        Args: {
-          _descricao: string
-          _grupo_documento_id: string
-          _mime_type: string
-          _nome_arquivo: string
-          _projeto_id: string
-          _storage_path: string
-          _tamanho_arquivo: number
-          _tipo: Database["public"]["Enums"]["tipo_documento"]
-        }
-        Returns: {
-          criado_em: string
-          descricao_da_versao: string
-          e_versao_atual: boolean
-          enviado_por: string | null
-          grupo_documento_id: string
-          id: string
-          mime_type: string | null
-          nome_arquivo: string
-          numero_versao: number
-          projeto_id: string
-          storage_path: string
-          tamanho_arquivo: number
-          tipo: Database["public"]["Enums"]["tipo_documento"]
-        }
-        SetofOptions: {
-          from: "*"
-          to: "documentos"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
+      registrar_nova_versao_documento:
+        | {
+            Args: {
+              _descricao: string
+              _grupo_documento_id: string
+              _mime_type: string
+              _nome_arquivo: string
+              _projeto_id: string
+              _storage_path: string
+              _tamanho_arquivo: number
+              _tipo: Database["public"]["Enums"]["tipo_documento"]
+            }
+            Returns: {
+              criado_em: string
+              descricao_da_versao: string
+              e_versao_atual: boolean
+              empresa_cliente_id: string | null
+              enviado_por: string | null
+              grupo_documento_id: string
+              id: string
+              mime_type: string | null
+              nome_arquivo: string
+              numero_versao: number
+              projeto_id: string | null
+              storage_path: string
+              tamanho_arquivo: number
+              tipo: Database["public"]["Enums"]["tipo_documento"]
+            }
+            SetofOptions: {
+              from: "*"
+              to: "documentos"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+        | {
+            Args: {
+              _descricao: string
+              _empresa_cliente_id?: string
+              _grupo_documento_id: string
+              _mime_type: string
+              _nome_arquivo: string
+              _projeto_id: string
+              _storage_path: string
+              _tamanho_arquivo: number
+              _tipo: Database["public"]["Enums"]["tipo_documento"]
+            }
+            Returns: {
+              criado_em: string
+              descricao_da_versao: string
+              e_versao_atual: boolean
+              empresa_cliente_id: string | null
+              enviado_por: string | null
+              grupo_documento_id: string
+              id: string
+              mime_type: string | null
+              nome_arquivo: string
+              numero_versao: number
+              projeto_id: string | null
+              storage_path: string
+              tamanho_arquivo: number
+              tipo: Database["public"]["Enums"]["tipo_documento"]
+            }
+            SetofOptions: {
+              from: "*"
+              to: "documentos"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
     }
     Enums: {
       app_role: "admin" | "consultor"
