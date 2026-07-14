@@ -176,6 +176,10 @@ function ProjetoDetail() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="ia">
+          <AiInsightsPanel projetoId={id} />
+        </TabsContent>
       </Tabs>
     </div>
   );
