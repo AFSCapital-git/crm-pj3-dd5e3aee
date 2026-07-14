@@ -513,6 +513,7 @@ export type Database = {
         | "alteracao_cronograma"
         | "aditivo_contratual"
         | "nota"
+        | "documento"
       tipo_marco:
         | "relatorio_tecnico"
         | "relatorio_financeiro"
@@ -674,6 +675,7 @@ export const Constants = {
         "alteracao_cronograma",
         "aditivo_contratual",
         "nota",
+        "documento",
       ],
       tipo_marco: [
         "relatorio_tecnico",
