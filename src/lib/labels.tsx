@@ -48,6 +48,7 @@ export function categoriaEditalLabel(s: string) { return categoriaEditalLabels[s
 const tipoInteracaoLabels: Record<string, string> = {
   reuniao: "Reunião",
   email: "E-mail",
+  email_encaminhado: "E-mail encaminhado",
   ligacao: "Ligação",
   alteracao_cronograma: "Alteração de cronograma",
   aditivo_contratual: "Aditivo contratual",

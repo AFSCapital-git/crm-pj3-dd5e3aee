@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, Building2, FileText, FolderKanban, Calendar, Users } from "lucide-react";
+import { LayoutDashboard, Building2, FileText, FolderKanban, Calendar, Users, Mail } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -20,6 +20,7 @@ const items = [
   { title: "Editais FINEP", url: "/editais", icon: FileText },
   { title: "Projetos", url: "/projetos", icon: FolderKanban },
   { title: "Cronograma", url: "/cronograma", icon: Calendar },
+  { title: "E-mails a vincular", url: "/emails-nao-vinculados", icon: Mail },
 ];
 
 export function AppSidebar() {

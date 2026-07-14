@@ -62,7 +62,7 @@ export const upsertProjeto = createServerFn({ method: "POST" })
       return row;
     }
     const { data: row, error } = await context.supabase
-      .from("projetos").insert(data.values).select().single();
+      .from("projetos").insert(data.values as any).select().single();
     if (error) throw error;
     return row;
   });

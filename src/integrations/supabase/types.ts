@@ -87,6 +87,95 @@ export type Database = {
           },
         ]
       }
+      emails_nao_vinculados: {
+        Row: {
+          anexos_referenciados: Json
+          assunto: string | null
+          corpo_texto: string | null
+          criado_em: string
+          data_email_original: string | null
+          dedup_hash: string
+          id: string
+          message_id: string | null
+          motivo: string
+          remetente_original: string
+          resolvido: boolean
+        }
+        Insert: {
+          anexos_referenciados?: Json
+          assunto?: string | null
+          corpo_texto?: string | null
+          criado_em?: string
+          data_email_original?: string | null
+          dedup_hash: string
+          id?: string
+          message_id?: string | null
+          motivo?: string
+          remetente_original: string
+          resolvido?: boolean
+        }
+        Update: {
+          anexos_referenciados?: Json
+          assunto?: string | null
+          corpo_texto?: string | null
+          criado_em?: string
+          data_email_original?: string | null
+          dedup_hash?: string
+          id?: string
+          message_id?: string | null
+          motivo?: string
+          remetente_original?: string
+          resolvido?: boolean
+        }
+        Relationships: []
+      }
+      emails_vinculados: {
+        Row: {
+          anexos_referenciados: Json
+          assunto: string | null
+          corpo_texto: string | null
+          criado_em: string
+          data_email_original: string | null
+          dedup_hash: string
+          id: string
+          message_id: string | null
+          projeto_id: string
+          remetente_original: string
+        }
+        Insert: {
+          anexos_referenciados?: Json
+          assunto?: string | null
+          corpo_texto?: string | null
+          criado_em?: string
+          data_email_original?: string | null
+          dedup_hash: string
+          id?: string
+          message_id?: string | null
+          projeto_id: string
+          remetente_original: string
+        }
+        Update: {
+          anexos_referenciados?: Json
+          assunto?: string | null
+          corpo_texto?: string | null
+          criado_em?: string
+          data_email_original?: string | null
+          dedup_hash?: string
+          id?: string
+          message_id?: string | null
+          projeto_id?: string
+          remetente_original?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "emails_vinculados_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       empresas_clientes: {
         Row: {
           cnpj: string
@@ -281,6 +370,7 @@ export type Database = {
       projetos: {
         Row: {
           area_tecnologica: string | null
+          codigo_rastreio: string
           created_at: string
           data_submissao: string | null
           empresa_cliente_id: string
@@ -295,6 +385,7 @@ export type Database = {
         }
         Insert: {
           area_tecnologica?: string | null
+          codigo_rastreio: string
           created_at?: string
           data_submissao?: string | null
           empresa_cliente_id: string
@@ -309,6 +400,7 @@ export type Database = {
         }
         Update: {
           area_tecnologica?: string | null
+          codigo_rastreio?: string
           created_at?: string
           data_submissao?: string | null
           empresa_cliente_id?: string
@@ -444,6 +536,7 @@ export type Database = {
         Args: { _empresa_id: string; _user_id: string }
         Returns: boolean
       }
+      gen_codigo_rastreio: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -526,6 +619,27 @@ export type Database = {
               isSetofReturn: false
             }
           }
+      vincular_email_manual: {
+        Args: { _pendente_id: string; _projeto_id: string }
+        Returns: {
+          anexos_referenciados: Json
+          assunto: string | null
+          corpo_texto: string | null
+          criado_em: string
+          data_email_original: string | null
+          dedup_hash: string
+          id: string
+          message_id: string | null
+          projeto_id: string
+          remetente_original: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "emails_vinculados"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       app_role: "admin" | "consultor"
@@ -561,6 +675,7 @@ export type Database = {
         | "aditivo_contratual"
         | "nota"
         | "documento"
+        | "email_encaminhado"
       tipo_marco:
         | "relatorio_tecnico"
         | "relatorio_financeiro"
@@ -723,6 +838,7 @@ export const Constants = {
         "aditivo_contratual",
         "nota",
         "documento",
+        "email_encaminhado",
       ],
       tipo_marco: [
         "relatorio_tecnico",
