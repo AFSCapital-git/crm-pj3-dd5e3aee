@@ -77,6 +77,29 @@ function resumirParaPrompt(bundle: any) {
   return linhas.join("\n");
 }
 
+const INSIGHT_FIELDS = [
+  "id",
+  "projeto_id",
+  "tipo",
+  "titulo",
+  "conteudo_gerado",
+  "modelo",
+  "gerado_em",
+  "gerado_por",
+  "revisado_por_humano",
+  "aprovado",
+  "revisado_por",
+  "revisado_em",
+  "created_at",
+  "updated_at",
+].join(",");
+
+// Joins explícitos usando os nomes das FKs para evitar ambiguidade no cache do PostgREST.
+const INSIGHT_SELECT =
+  `${INSIGHT_FIELDS},` +
+  `autor:usuarios_internos!insights_ia_gerado_por_fkey(id,nome,email),` +
+  `revisor:usuarios_internos!insights_ia_revisado_por_fkey(id,nome,email)`;
+
 export const listInsights = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({
@@ -84,17 +107,47 @@ export const listInsights = createServerFn({ method: "GET" })
     tipo: z.enum(["alerta_risco","sugestao","rascunho_relatorio"]).optional(),
   }).parse(d ?? {}))
   .handler(async ({ data, context }) => {
+    const filtros = {
+      projeto_id: data.projeto_id ?? "(qualquer)",
+      tipo: data.tipo ?? "(qualquer)",
+      relacionamentos: [
+        "insights_ia.gerado_por -> usuarios_internos.id (autor)",
+        "insights_ia.revisado_por -> usuarios_internos.id (revisor)",
+      ],
+    };
+    console.info("[listInsights] iniciando consulta", filtros);
+
     let q = context.supabase.from("insights_ia" as any)
-      .select("*")
+      .select(INSIGHT_SELECT)
       .order("gerado_em", { ascending: false })
       .limit(100);
     if (data.projeto_id === null) q = q.is("projeto_id", null);
     else if (data.projeto_id) q = q.eq("projeto_id", data.projeto_id);
     if (data.tipo) q = q.eq("tipo", data.tipo);
+
     const { data: rows, error } = await q;
-    if (error) throw error;
+    if (error) {
+      console.error("[listInsights] erro Supabase", {
+        code: (error as any).code,
+        message: error.message,
+        details: (error as any).details,
+        hint: (error as any).hint,
+        filtros,
+        select: INSIGHT_SELECT,
+      });
+      if ((error as any).code === "PGRST200" || /relationship/i.test(error.message)) {
+        throw new Error(
+          `Falha ao resolver relacionamento no schema cache do PostgREST. ` +
+          `Verifique as FKs: ${filtros.relacionamentos.join(" | ")}. ` +
+          `Detalhe: ${error.message}`
+        );
+      }
+      throw error;
+    }
+    console.info("[listInsights] concluído", { total: rows?.length ?? 0 });
     return rows ?? [];
   });
+
 
 export const gerarInsightsPortfolio = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
