@@ -55,51 +55,10 @@ CREATE POLICY "Documentos: admin remove"
   USING (public.is_admin(auth.uid()));
 
 -- RPC atômica: registra nova versão de um grupo existente
-CREATE OR REPLACE FUNCTION public.registrar_nova_versao_documento(
-  _projeto_id UUID,
-  _grupo_documento_id UUID,
-  _tipo public.tipo_documento,
-  _nome_arquivo TEXT,
-  _storage_path TEXT,
-  _tamanho_arquivo BIGINT,
-  _mime_type TEXT,
-  _descricao TEXT
-) RETURNS public.documentos
-LANGUAGE plpgsql
-SECURITY INVOKER
-SET search_path = public
-AS $$
-DECLARE
-  _prox_versao INT;
-  _nova public.documentos;
-BEGIN
-  IF NOT public.projeto_no_escopo(_projeto_id, auth.uid()) THEN
-    RAISE EXCEPTION 'Sem permissão para este projeto';
-  END IF;
-
-  -- desmarca versão atual anterior (dentro da transação, evita corrida)
-  UPDATE public.documentos
-     SET e_versao_atual = false
-   WHERE grupo_documento_id = _grupo_documento_id AND e_versao_atual;
-
-  SELECT COALESCE(MAX(numero_versao),0)+1 INTO _prox_versao
-    FROM public.documentos WHERE grupo_documento_id = _grupo_documento_id;
-
-  INSERT INTO public.documentos (
-    projeto_id, grupo_documento_id, tipo, nome_arquivo, numero_versao,
-    storage_path, tamanho_arquivo, mime_type, enviado_por,
-    descricao_da_versao, e_versao_atual
-  ) VALUES (
-    _projeto_id, _grupo_documento_id, _tipo, _nome_arquivo, _prox_versao,
-    _storage_path, _tamanho_arquivo, _mime_type, auth.uid(),
-    COALESCE(_descricao,''), true
-  ) RETURNING * INTO _nova;
-
-  RETURN _nova;
-END; $$;
-
-REVOKE ALL ON FUNCTION public.registrar_nova_versao_documento(UUID,UUID,public.tipo_documento,TEXT,TEXT,BIGINT,TEXT,TEXT) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.registrar_nova_versao_documento(UUID,UUID,public.tipo_documento,TEXT,TEXT,BIGINT,TEXT,TEXT) TO authenticated;
+-- DEPRECATED: Esta versão do RPC foi consolidada com a versão mais completa
+-- em 20260714205114_b7dca12e-6aec-4497-9ad9-7d8bf652c1a7.sql
+-- que suporta tanto projeto quanto empresa.
+-- Esta função foi removida. Use a versão em 20260714205114 que aceita projeto OU empresa.
 
 -- Trigger de auditoria: cada upload vira registro na linha do tempo
 CREATE OR REPLACE FUNCTION public.tg_audit_documentos()

@@ -1,0 +1,48 @@
+-- Migration: Consolidação de RPC e documentação de paginação
+-- Criado: 2026-07-14
+-- Objetivo: Remover duplicatas e documentar padrões de paginação
+
+-- ============================================================
+-- Nota sobre paginação cursor-based
+-- ============================================================
+-- Para tabelas grandes (> 1000 linhas), a paginação offset/limit
+-- fica lenta porque o BD precisa fazer scan até a posição.
+--
+-- Solução: Cursor-based pagination
+-- - Cursor = ID ou timestamp do último item da página anterior
+-- - Query busca itens APÓS o cursor (usando comparações)
+-- - Sempre O(log n) com índice apropriado
+--
+-- Implementação no código:
+-- - src/lib/pagination.functions.ts (server functions)
+-- - src/hooks/use-paginated-query.tsx (React hooks)
+--
+-- Usar quando:
+-- - Listagem com > 1000 itens esperados
+-- - Tabelas que crescem continuamente
+-- - Infinite scroll ou "carregar mais"
+--
+-- Não usar quando:
+-- - Tabelas pequenas (< 100 itens)
+-- - Paginação já implementada no cliente
+-- - Acesso aleatório a páginas (ex: "ir para página 5")
+
+-- ============================================================
+-- Consolidação: remover função duplicada
+-- ============================================================
+-- A função registrar_nova_versao_documento foi mantida apenas na migração
+-- 20260714205114_b7dca12e-6aec-4497-9ad9-7d8bf652c1a7.sql (versão completa)
+-- que suporta projeto OU empresa.
+--
+-- Versão obsoleta em 20260714204152 foi marcada como DEPRECATED.
+
+-- ============================================================
+-- Recomendação: Usar paginação em produção
+-- ============================================================
+-- Substituir gradualmente:
+-- - listEmpresas() → listEmpresasPaginado() (com cursor)
+-- - listEditais() → listEditaisPaginado() (com cursor)
+-- - getCronograma() → listMarcosPaginado() (com cursor)
+--
+-- O limite de 1000 no servidor é temporário.
+-- Eventualmente todas as listas usarão cursor-based pagination.
