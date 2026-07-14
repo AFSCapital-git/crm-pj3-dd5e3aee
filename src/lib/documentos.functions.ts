@@ -49,7 +49,7 @@ export const registerDocumentoVersion = createServerFn({ method: "POST" })
           _nome_arquivo: data.nome_arquivo,
           _storage_path: data.storage_path,
           _tamanho_arquivo: data.tamanho_arquivo,
-          _mime_type: data.mime_type ?? null,
+          _mime_type: data.mime_type ?? "",
           _descricao: data.descricao_da_versao ?? "",
         },
       );
