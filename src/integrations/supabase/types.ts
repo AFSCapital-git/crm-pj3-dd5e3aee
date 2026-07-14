@@ -283,10 +283,24 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "insights_ia_gerado_por_fkey"
+            columns: ["gerado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_internos"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "insights_ia_projeto_id_fkey"
             columns: ["projeto_id"]
             isOneToOne: false
             referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insights_ia_revisado_por_fkey"
+            columns: ["revisado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_internos"
             referencedColumns: ["id"]
           },
         ]
