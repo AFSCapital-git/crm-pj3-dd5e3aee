@@ -60,8 +60,8 @@ export const registerDocumentoVersion = createServerFn({ method: "POST" })
       const { data: row, error } = await supabase.rpc(
         "registrar_nova_versao_documento",
         {
-          _projeto_id: data.projeto_id ?? null,
-          _empresa_cliente_id: data.empresa_cliente_id ?? null,
+          _projeto_id: (data.projeto_id ?? null) as unknown as string,
+          _empresa_cliente_id: (data.empresa_cliente_id ?? null) as unknown as string,
           _grupo_documento_id: data.grupo_documento_id,
           _tipo: data.tipo,
           _nome_arquivo: data.nome_arquivo,
