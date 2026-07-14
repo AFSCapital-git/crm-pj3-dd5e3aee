@@ -19,6 +19,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedCronogramaRouteImport } from './routes/_authenticated/cronograma'
 import { Route as AuthenticatedProjetosIndexRouteImport } from './routes/_authenticated/projetos.index'
 import { Route as AuthenticatedProjetosIdRouteImport } from './routes/_authenticated/projetos.$id'
+import { Route as AuthenticatedEmpresasIdRouteImport } from './routes/_authenticated/empresas.$id'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -70,6 +71,11 @@ const AuthenticatedProjetosIdRoute = AuthenticatedProjetosIdRouteImport.update({
   path: '/projetos/$id',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedEmpresasIdRoute = AuthenticatedEmpresasIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AuthenticatedEmpresasRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -77,8 +83,9 @@ export interface FileRoutesByFullPath {
   '/cronograma': typeof AuthenticatedCronogramaRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/editais': typeof AuthenticatedEditaisRoute
-  '/empresas': typeof AuthenticatedEmpresasRoute
+  '/empresas': typeof AuthenticatedEmpresasRouteWithChildren
   '/usuarios': typeof AuthenticatedUsuariosRoute
+  '/empresas/$id': typeof AuthenticatedEmpresasIdRoute
   '/projetos/$id': typeof AuthenticatedProjetosIdRoute
   '/projetos/': typeof AuthenticatedProjetosIndexRoute
 }
@@ -88,8 +95,9 @@ export interface FileRoutesByTo {
   '/cronograma': typeof AuthenticatedCronogramaRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/editais': typeof AuthenticatedEditaisRoute
-  '/empresas': typeof AuthenticatedEmpresasRoute
+  '/empresas': typeof AuthenticatedEmpresasRouteWithChildren
   '/usuarios': typeof AuthenticatedUsuariosRoute
+  '/empresas/$id': typeof AuthenticatedEmpresasIdRoute
   '/projetos/$id': typeof AuthenticatedProjetosIdRoute
   '/projetos': typeof AuthenticatedProjetosIndexRoute
 }
@@ -101,8 +109,9 @@ export interface FileRoutesById {
   '/_authenticated/cronograma': typeof AuthenticatedCronogramaRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/editais': typeof AuthenticatedEditaisRoute
-  '/_authenticated/empresas': typeof AuthenticatedEmpresasRoute
+  '/_authenticated/empresas': typeof AuthenticatedEmpresasRouteWithChildren
   '/_authenticated/usuarios': typeof AuthenticatedUsuariosRoute
+  '/_authenticated/empresas/$id': typeof AuthenticatedEmpresasIdRoute
   '/_authenticated/projetos/$id': typeof AuthenticatedProjetosIdRoute
   '/_authenticated/projetos/': typeof AuthenticatedProjetosIndexRoute
 }
@@ -116,6 +125,7 @@ export interface FileRouteTypes {
     | '/editais'
     | '/empresas'
     | '/usuarios'
+    | '/empresas/$id'
     | '/projetos/$id'
     | '/projetos/'
   fileRoutesByTo: FileRoutesByTo
@@ -127,6 +137,7 @@ export interface FileRouteTypes {
     | '/editais'
     | '/empresas'
     | '/usuarios'
+    | '/empresas/$id'
     | '/projetos/$id'
     | '/projetos'
   id:
@@ -139,6 +150,7 @@ export interface FileRouteTypes {
     | '/_authenticated/editais'
     | '/_authenticated/empresas'
     | '/_authenticated/usuarios'
+    | '/_authenticated/empresas/$id'
     | '/_authenticated/projetos/$id'
     | '/_authenticated/projetos/'
   fileRoutesById: FileRoutesById
@@ -221,14 +233,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjetosIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/empresas/$id': {
+      id: '/_authenticated/empresas/$id'
+      path: '/$id'
+      fullPath: '/empresas/$id'
+      preLoaderRoute: typeof AuthenticatedEmpresasIdRouteImport
+      parentRoute: typeof AuthenticatedEmpresasRoute
+    }
   }
 }
+
+interface AuthenticatedEmpresasRouteChildren {
+  AuthenticatedEmpresasIdRoute: typeof AuthenticatedEmpresasIdRoute
+}
+
+const AuthenticatedEmpresasRouteChildren: AuthenticatedEmpresasRouteChildren = {
+  AuthenticatedEmpresasIdRoute: AuthenticatedEmpresasIdRoute,
+}
+
+const AuthenticatedEmpresasRouteWithChildren =
+  AuthenticatedEmpresasRoute._addFileChildren(
+    AuthenticatedEmpresasRouteChildren,
+  )
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedCronogramaRoute: typeof AuthenticatedCronogramaRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedEditaisRoute: typeof AuthenticatedEditaisRoute
-  AuthenticatedEmpresasRoute: typeof AuthenticatedEmpresasRoute
+  AuthenticatedEmpresasRoute: typeof AuthenticatedEmpresasRouteWithChildren
   AuthenticatedUsuariosRoute: typeof AuthenticatedUsuariosRoute
   AuthenticatedProjetosIdRoute: typeof AuthenticatedProjetosIdRoute
   AuthenticatedProjetosIndexRoute: typeof AuthenticatedProjetosIndexRoute
@@ -238,7 +270,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCronogramaRoute: AuthenticatedCronogramaRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedEditaisRoute: AuthenticatedEditaisRoute,
-  AuthenticatedEmpresasRoute: AuthenticatedEmpresasRoute,
+  AuthenticatedEmpresasRoute: AuthenticatedEmpresasRouteWithChildren,
   AuthenticatedUsuariosRoute: AuthenticatedUsuariosRoute,
   AuthenticatedProjetosIdRoute: AuthenticatedProjetosIdRoute,
   AuthenticatedProjetosIndexRoute: AuthenticatedProjetosIndexRoute,

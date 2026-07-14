@@ -11,7 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, FileText } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { listEmpresas, upsertEmpresa, deleteEmpresa } from "@/lib/empresas.functions";
 import { listUsuarios } from "@/lib/dashboard.functions";
 
@@ -90,6 +91,11 @@ function EmpresasPage() {
                     <TableCell>{e.consultor?.nome ?? "—"}</TableCell>
                     <TableCell><Badge variant="outline">{e.status}</Badge></TableCell>
                     <TableCell className="text-right space-x-1">
+                      <Button asChild size="icon" variant="ghost" title="Abrir">
+                        <Link to="/empresas/$id" params={{ id: e.id }}>
+                          <FileText className="h-4 w-4" />
+                        </Link>
+                      </Button>
                       <Button size="icon" variant="ghost" onClick={() => { setEditing(e); setOpen(true); }}>
                         <Pencil className="h-4 w-4" />
                       </Button>

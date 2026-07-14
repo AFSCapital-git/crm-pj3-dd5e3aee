@@ -19,12 +19,26 @@ export const listDocumentosByProjeto = createServerFn({ method: "GET" })
     return rows ?? [];
   });
 
+export const listDocumentosByEmpresa = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { empresa_cliente_id: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase
+      .from("documentos")
+      .select("*, autor:usuarios_internos!documentos_enviado_por_fkey(id,nome)")
+      .eq("empresa_cliente_id", data.empresa_cliente_id)
+      .order("criado_em", { ascending: false });
+    if (error) throw error;
+    return rows ?? [];
+  });
+
 export const registerDocumentoVersion = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z
       .object({
-        projeto_id: z.string().uuid(),
+        projeto_id: z.string().uuid().nullable().optional(),
+        empresa_cliente_id: z.string().uuid().nullable().optional(),
         grupo_documento_id: z.string().uuid().nullable().optional(),
         tipo: tipoDoc,
         nome_arquivo: z.string().min(1).max(255),
@@ -33,17 +47,21 @@ export const registerDocumentoVersion = createServerFn({ method: "POST" })
         mime_type: z.string().max(255).nullable().optional(),
         descricao_da_versao: z.string().max(1000).optional().default(""),
       })
+      .refine(
+        (v) => Boolean(v.projeto_id) !== Boolean(v.empresa_cliente_id),
+        { message: "Informe exatamente um: projeto_id ou empresa_cliente_id" },
+      )
       .parse(d),
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
     if (data.grupo_documento_id) {
-      // Nova versão via RPC atômica
       const { data: row, error } = await supabase.rpc(
         "registrar_nova_versao_documento",
         {
-          _projeto_id: data.projeto_id,
+          _projeto_id: (data.projeto_id ?? null) as unknown as string,
+          _empresa_cliente_id: (data.empresa_cliente_id ?? null) as unknown as string,
           _grupo_documento_id: data.grupo_documento_id,
           _tipo: data.tipo,
           _nome_arquivo: data.nome_arquivo,
@@ -57,12 +75,12 @@ export const registerDocumentoVersion = createServerFn({ method: "POST" })
       return row;
     }
 
-    // Novo grupo (v1)
     const grupo = crypto.randomUUID();
     const { data: row, error } = await supabase
       .from("documentos")
       .insert({
-        projeto_id: data.projeto_id,
+        projeto_id: data.projeto_id ?? null,
+        empresa_cliente_id: data.empresa_cliente_id ?? null,
         grupo_documento_id: grupo,
         tipo: data.tipo,
         nome_arquivo: data.nome_arquivo,
