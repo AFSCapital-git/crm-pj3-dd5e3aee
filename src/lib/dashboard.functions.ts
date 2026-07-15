@@ -154,6 +154,17 @@ export const exportProjetosCsv = createServerFn({ method: "GET" })
 export const listUsuarios = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    // Validar que usuário é admin antes de retornar lista
+    const { data: userRole } = await context.supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", context.userId)
+      .maybeSingle();
+
+    if (userRole?.role !== "admin") {
+      throw new Error("Acesso negado. Apenas administradores podem listar usuários.");
+    }
+
     const [{ data: users }, { data: roles }] = await Promise.all([
       context.supabase.from("usuarios_internos").select("*").order("nome").limit(100),
       context.supabase.from("user_roles").select("user_id,role").limit(500),
