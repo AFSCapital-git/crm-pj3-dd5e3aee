@@ -14,6 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      convites: {
+        Row: {
+          aceito_em: string | null
+          convidado_por: string | null
+          criado_em: string
+          data_expiracao: string
+          email_convidado: string
+          id: string
+          nome_sugerido: string | null
+          papel_designado: Database["public"]["Enums"]["app_role"]
+          status: string
+          token_hash: string
+          updated_at: string
+          usuario_criado_id: string | null
+        }
+        Insert: {
+          aceito_em?: string | null
+          convidado_por?: string | null
+          criado_em?: string
+          data_expiracao: string
+          email_convidado: string
+          id?: string
+          nome_sugerido?: string | null
+          papel_designado: Database["public"]["Enums"]["app_role"]
+          status?: string
+          token_hash: string
+          updated_at?: string
+          usuario_criado_id?: string | null
+        }
+        Update: {
+          aceito_em?: string | null
+          convidado_por?: string | null
+          criado_em?: string
+          data_expiracao?: string
+          email_convidado?: string
+          id?: string
+          nome_sugerido?: string | null
+          papel_designado?: Database["public"]["Enums"]["app_role"]
+          status?: string
+          token_hash?: string
+          updated_at?: string
+          usuario_criado_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "convites_convidado_por_fkey"
+            columns: ["convidado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_internos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "convites_usuario_criado_id_fkey"
+            columns: ["usuario_criado_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_internos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documentos: {
         Row: {
           criado_em: string
@@ -389,6 +449,58 @@ export type Database = {
         }
         Relationships: []
       }
+      log_auditoria_admin: {
+        Row: {
+          acao: string
+          convite_id: string | null
+          data_hora: string
+          detalhes_da_acao: Json
+          id: string
+          usuario_afetado: string | null
+          usuario_que_executou: string | null
+        }
+        Insert: {
+          acao: string
+          convite_id?: string | null
+          data_hora?: string
+          detalhes_da_acao?: Json
+          id?: string
+          usuario_afetado?: string | null
+          usuario_que_executou?: string | null
+        }
+        Update: {
+          acao?: string
+          convite_id?: string | null
+          data_hora?: string
+          detalhes_da_acao?: Json
+          id?: string
+          usuario_afetado?: string | null
+          usuario_que_executou?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "log_auditoria_admin_convite_id_fkey"
+            columns: ["convite_id"]
+            isOneToOne: false
+            referencedRelation: "convites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "log_auditoria_admin_usuario_afetado_fkey"
+            columns: ["usuario_afetado"]
+            isOneToOne: false
+            referencedRelation: "usuarios_internos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "log_auditoria_admin_usuario_que_executou_fkey"
+            columns: ["usuario_que_executou"]
+            isOneToOne: false
+            referencedRelation: "usuarios_internos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       marcos_entregas: {
         Row: {
           created_at: string
@@ -530,29 +642,46 @@ export type Database = {
       usuarios_internos: {
         Row: {
           ativo: boolean
+          convidado_por: string | null
           created_at: string
           email: string
           id: string
           nome: string
+          status: string
+          ultimo_login: string | null
           updated_at: string
         }
         Insert: {
           ativo?: boolean
+          convidado_por?: string | null
           created_at?: string
           email: string
           id: string
           nome: string
+          status?: string
+          ultimo_login?: string | null
           updated_at?: string
         }
         Update: {
           ativo?: boolean
+          convidado_por?: string | null
           created_at?: string
           email?: string
           id?: string
           nome?: string
+          status?: string
+          ultimo_login?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "usuarios_internos_convidado_por_fkey"
+            columns: ["convidado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_internos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -621,6 +750,7 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      pode_alterar_admin: { Args: { _user_id: string }; Returns: boolean }
       projeto_no_escopo: {
         Args: { _projeto_id: string; _user_id: string }
         Returns: boolean

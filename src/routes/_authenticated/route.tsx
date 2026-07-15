@@ -12,6 +12,12 @@ export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async () => {
     const { data, error } = await supabase.auth.getUser();
     if (error || !data.user) throw redirect({ to: "/auth" });
+    const { data: perfil } = await supabase
+      .from("usuarios_internos").select("status").eq("id", data.user.id).maybeSingle();
+    if (perfil?.status === "desativado") {
+      await supabase.auth.signOut();
+      throw redirect({ to: "/auth" });
+    }
     return { user: data.user };
   },
   component: AuthLayout,
