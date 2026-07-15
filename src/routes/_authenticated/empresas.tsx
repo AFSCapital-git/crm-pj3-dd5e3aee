@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,11 +10,29 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, FileText } from "lucide-react";
+import { Plus, Pencil, Trash2, FileText, Loader2, Search, X } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { listEmpresas, upsertEmpresa, deleteEmpresa } from "@/lib/empresas.functions";
 import { listUsuarios } from "@/lib/dashboard.functions";
+import {
+  formatCpfCnpj,
+  formatTelefone,
+  validateCpfCnpj,
+  validateEmail,
+  validateTelefone,
+  onlyDigits,
+} from "@/lib/validators";
 
 export const Route = createFileRoute("/_authenticated/empresas")({
   component: EmpresasPage,
@@ -29,6 +47,14 @@ function EmpresasPage() {
 
   const [editing, setEditing] = useState<any | null>(null);
   const [open, setOpen] = useState(false);
+  const [toDelete, setToDelete] = useState<any | null>(null);
+
+  // Filtros
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [porteFilter, setPorteFilter] = useState<string>("all");
+  const hasFilters = search.trim() !== "" || statusFilter !== "all" || porteFilter !== "all";
+  const clearFilters = () => { setSearch(""); setStatusFilter("all"); setPorteFilter("all"); };
 
   const upsert = useServerFn(upsertEmpresa);
   const del = useServerFn(deleteEmpresa);
@@ -40,9 +66,23 @@ function EmpresasPage() {
   });
   const mDelete = useMutation({
     mutationFn: (id: string) => del({ data: { id } }),
-    onSuccess: () => { toast.success("Empresa removida"); qc.invalidateQueries({ queryKey: ["empresas"] }); },
+    onSuccess: () => { toast.success("Empresa removida"); qc.invalidateQueries({ queryKey: ["empresas"] }); setToDelete(null); },
     onError: (e: any) => toast.error(e.message),
   });
+
+  const filtered = useMemo(() => {
+    const rows = q.data ?? [];
+    const s = search.trim().toLowerCase();
+    const sDigits = onlyDigits(search);
+    return rows.filter((e: any) => {
+      if (statusFilter !== "all" && e.status !== statusFilter) return false;
+      if (porteFilter !== "all" && e.porte !== porteFilter) return false;
+      if (!s) return true;
+      const nome = (e.razao_social ?? "").toLowerCase();
+      const cnpj = onlyDigits(e.cnpj ?? "");
+      return nome.includes(s) || (sDigits && cnpj.includes(sDigits));
+    });
+  }, [q.data, search, statusFilter, porteFilter]);
 
   return (
     <div className="space-y-6">
@@ -68,7 +108,45 @@ function EmpresasPage() {
       </div>
 
       <Card>
-        <CardHeader><CardTitle>Lista</CardTitle></CardHeader>
+        <CardHeader>
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <CardTitle>Lista</CardTitle>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <div className="relative">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  className="pl-8 sm:w-64"
+                  placeholder="Buscar por nome ou CNPJ…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="sm:w-36"><SelectValue placeholder="Status" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os status</SelectItem>
+                  <SelectItem value="lead">Lead</SelectItem>
+                  <SelectItem value="ativo">Ativo</SelectItem>
+                  <SelectItem value="inativo">Inativo</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={porteFilter} onValueChange={setPorteFilter}>
+                <SelectTrigger className="sm:w-32"><SelectValue placeholder="Porte" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os portes</SelectItem>
+                  <SelectItem value="ME">ME</SelectItem>
+                  <SelectItem value="EPP">EPP</SelectItem>
+                  <SelectItem value="Grande">Grande</SelectItem>
+                </SelectContent>
+              </Select>
+              {hasFilters && (
+                <Button variant="ghost" size="sm" onClick={clearFilters}>
+                  <X className="mr-1 h-4 w-4" /> Limpar
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardHeader>
         <CardContent>
           {q.isLoading ? <p>Carregando…</p> : (
             <Table>
@@ -83,7 +161,7 @@ function EmpresasPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(q.data ?? []).map((e: any) => (
+                {filtered.map((e: any) => (
                   <TableRow key={e.id}>
                     <TableCell className="font-medium">{e.razao_social}</TableCell>
                     <TableCell>{e.cnpj}</TableCell>
@@ -99,41 +177,146 @@ function EmpresasPage() {
                       <Button size="icon" variant="ghost" onClick={() => { setEditing(e); setOpen(true); }}>
                         <Pencil className="h-4 w-4" />
                       </Button>
-                      <Button size="icon" variant="ghost" onClick={() => confirm("Remover empresa?") && mDelete.mutate(e.id)}>
+                      <Button size="icon" variant="ghost" onClick={() => setToDelete(e)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </TableCell>
                   </TableRow>
                 ))}
-                {q.data?.length === 0 && (
-                  <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">Nenhuma empresa cadastrada.</TableCell></TableRow>
+                {filtered.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center text-muted-foreground py-10">
+                      {(q.data ?? []).length === 0 ? (
+                        "Nenhuma empresa cadastrada."
+                      ) : (
+                        <div className="flex flex-col items-center gap-2">
+                          <span>Nenhum cliente encontrado com esses filtros.</span>
+                          <Button variant="outline" size="sm" onClick={clearFilters}>
+                            <X className="mr-1 h-4 w-4" /> Limpar filtros
+                          </Button>
+                        </div>
+                      )}
+                    </TableCell>
+                  </TableRow>
                 )}
               </TableBody>
             </Table>
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover empresa?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você vai remover <strong>{toDelete?.razao_social}</strong> da lista ativa de clientes.
+              O histórico associado (projetos, interações, documentos e e-mails vinculados) permanece
+              preservado no sistema para fins de auditoria e não será apagado.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={mDelete.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={mDelete.isPending}
+              onClick={(e) => { e.preventDefault(); if (toDelete) mDelete.mutate(toDelete.id); }}
+            >
+              {mDelete.isPending ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Removendo…</>) : "Remover"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
 
+type Errors = Partial<Record<"cnpj" | "email" | "telefone", string>>;
+
 function EmpresaForm({ initial, usuarios, onSubmit, loading }: any) {
   const [values, setValues] = useState({
     razao_social: initial?.razao_social ?? "",
-    cnpj: initial?.cnpj ?? "",
+    cnpj: initial?.cnpj ? formatCpfCnpj(initial.cnpj) : "",
     porte: initial?.porte ?? "ME",
     setor_atuacao: initial?.setor_atuacao ?? "",
     contato_responsavel: initial?.contato_responsavel ?? "",
     email: initial?.email ?? "",
-    telefone: initial?.telefone ?? "",
+    telefone: initial?.telefone ? formatTelefone(initial.telefone) : "",
     consultor_responsavel_id: initial?.consultor_responsavel_id ?? null,
     status: initial?.status ?? "lead",
   });
+  const [errors, setErrors] = useState<Errors>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  const validateField = (name: "cnpj" | "email" | "telefone", raw: string): string | null => {
+    if (name === "cnpj") return validateCpfCnpj(raw);
+    if (name === "email") return validateEmail(raw, false);
+    if (name === "telefone") return validateTelefone(raw, false);
+    return null;
+  };
+
+  const handleBlur = (name: "cnpj" | "email" | "telefone") => {
+    setTouched((t) => ({ ...t, [name]: true }));
+    const err = validateField(name, (values as any)[name] ?? "");
+    setErrors((e) => ({ ...e, [name]: err ?? undefined }));
+  };
+
+  const handleChange = (name: "cnpj" | "email" | "telefone", v: string) => {
+    let next = v;
+    if (name === "cnpj") next = formatCpfCnpj(v);
+    if (name === "telefone") next = formatTelefone(v);
+    setValues((s) => ({ ...s, [name]: next }));
+    if (touched[name]) {
+      const err = validateField(name, next);
+      setErrors((e) => ({ ...e, [name]: err ?? undefined }));
+    }
+  };
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const newErrors: Errors = {
+      cnpj: validateCpfCnpj(values.cnpj) ?? undefined,
+      email: validateEmail(values.email, false) ?? undefined,
+      telefone: validateTelefone(values.telefone, false) ?? undefined,
+    };
+    setTouched({ cnpj: true, email: true, telefone: true });
+    setErrors(newErrors);
+    if (newErrors.cnpj || newErrors.email || newErrors.telefone) {
+      toast.error("Corrija os campos destacados.");
+      return;
+    }
+    if (loading) return;
+    onSubmit({
+      ...values,
+      cnpj: onlyDigits(values.cnpj),
+      telefone: values.telefone ? onlyDigits(values.telefone) : null,
+      email: values.email || null,
+    });
+  };
+
+  const fieldErrorProps = (name: "cnpj" | "email" | "telefone") => ({
+    "aria-invalid": !!errors[name] || undefined,
+    className: errors[name] ? "border-destructive focus-visible:ring-destructive" : "",
+  });
+
   return (
-    <form onSubmit={(e) => { e.preventDefault(); onSubmit(values); }} className="space-y-3">
-      <div><Label>Razão social</Label><Input value={values.razao_social} onChange={(e) => setValues({ ...values, razao_social: e.target.value })} required /></div>
+    <form onSubmit={submit} className="space-y-3">
+      <div>
+        <Label>Razão social</Label>
+        <Input value={values.razao_social} onChange={(e) => setValues({ ...values, razao_social: e.target.value })} required />
+      </div>
       <div className="grid grid-cols-2 gap-3">
-        <div><Label>CNPJ</Label><Input value={values.cnpj} onChange={(e) => setValues({ ...values, cnpj: e.target.value })} required /></div>
+        <div>
+          <Label>CPF / CNPJ</Label>
+          <Input
+            value={values.cnpj}
+            onChange={(e) => handleChange("cnpj", e.target.value)}
+            onBlur={() => handleBlur("cnpj")}
+            placeholder="00.000.000/0000-00"
+            required
+            {...fieldErrorProps("cnpj")}
+          />
+          {errors.cnpj && <p className="mt-1 text-xs text-destructive">{errors.cnpj}</p>}
+        </div>
         <div>
           <Label>Porte</Label>
           <Select value={values.porte} onValueChange={(v) => setValues({ ...values, porte: v as any })}>
@@ -149,9 +332,29 @@ function EmpresaForm({ initial, usuarios, onSubmit, loading }: any) {
       <div><Label>Setor de atuação</Label><Input value={values.setor_atuacao ?? ""} onChange={(e) => setValues({ ...values, setor_atuacao: e.target.value })} /></div>
       <div className="grid grid-cols-2 gap-3">
         <div><Label>Contato</Label><Input value={values.contato_responsavel ?? ""} onChange={(e) => setValues({ ...values, contato_responsavel: e.target.value })} /></div>
-        <div><Label>Telefone</Label><Input value={values.telefone ?? ""} onChange={(e) => setValues({ ...values, telefone: e.target.value })} /></div>
+        <div>
+          <Label>Telefone</Label>
+          <Input
+            value={values.telefone ?? ""}
+            onChange={(e) => handleChange("telefone", e.target.value)}
+            onBlur={() => handleBlur("telefone")}
+            placeholder="(11) 99999-9999"
+            {...fieldErrorProps("telefone")}
+          />
+          {errors.telefone && <p className="mt-1 text-xs text-destructive">{errors.telefone}</p>}
+        </div>
       </div>
-      <div><Label>E-mail</Label><Input type="email" value={values.email ?? ""} onChange={(e) => setValues({ ...values, email: e.target.value })} /></div>
+      <div>
+        <Label>E-mail</Label>
+        <Input
+          type="email"
+          value={values.email ?? ""}
+          onChange={(e) => handleChange("email", e.target.value)}
+          onBlur={() => handleBlur("email")}
+          {...fieldErrorProps("email")}
+        />
+        {errors.email && <p className="mt-1 text-xs text-destructive">{errors.email}</p>}
+      </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label>Consultor responsável</Label>
@@ -175,7 +378,11 @@ function EmpresaForm({ initial, usuarios, onSubmit, loading }: any) {
           </Select>
         </div>
       </div>
-      <DialogFooter><Button type="submit" disabled={loading}>Salvar</Button></DialogFooter>
+      <DialogFooter>
+        <Button type="submit" disabled={loading}>
+          {loading ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando…</>) : "Salvar"}
+        </Button>
+      </DialogFooter>
     </form>
   );
 }
