@@ -19,6 +19,7 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [nome, setNome] = useState("");
+  const [mode, setMode] = useState<"login" | "signup" | "forgot">("login");
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -53,6 +54,19 @@ function AuthPage() {
     toast.success("Conta criada. Faça login.");
   }
 
+  async function handleForgotPassword(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setLoading(false);
+    if (error) return toast.error(error.message);
+    toast.success("Se o e-mail existir, você receberá um link para redefinir a senha.");
+    setMode("login");
+    setEmail("");
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
       <Card className="w-full max-w-md">
@@ -67,31 +81,69 @@ function AuthPage() {
               <TabsTrigger value="signup">Cadastrar</TabsTrigger>
             </TabsList>
             <TabsContent value="login">
-              <form onSubmit={handleLogin} className="space-y-4 pt-4">
-                <div>
-                  <Label htmlFor="email">E-mail</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="password">Senha</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  Entrar
-                </Button>
-              </form>
+              {mode === "login" ? (
+                <form onSubmit={handleLogin} className="space-y-4 pt-4">
+                  <div>
+                    <Label htmlFor="email">E-mail</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="password">Senha</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    Entrar
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode("forgot");
+                      setPassword("");
+                    }}
+                    className="text-xs text-muted-foreground underline w-full text-center mt-2"
+                  >
+                    Esqueci minha senha
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleForgotPassword} className="space-y-4 pt-4">
+                  <div>
+                    <Label htmlFor="forgot-email">E-mail</Label>
+                    <Input
+                      id="forgot-email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    Enviar link de redefinição
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode("login");
+                      setEmail("");
+                    }}
+                    className="text-xs text-muted-foreground underline w-full text-center mt-2"
+                  >
+                    Voltar ao login
+                  </button>
+                </form>
+              )}
             </TabsContent>
             <TabsContent value="signup">
               <form onSubmit={handleSignup} className="space-y-4 pt-4">

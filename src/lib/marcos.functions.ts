@@ -42,6 +42,16 @@ export const upsertMarco = createServerFn({ method: "POST" })
       .select()
       .single();
     if (error) throw error;
+
+    if (data.values.responsavel_id) {
+      try {
+        const { notificarMarcoAtribuido } = await import("@/lib/notifications.server");
+        await notificarMarcoAtribuido(row);
+      } catch (err) {
+        console.error("[email] erro ao notificar marco atribuído", err);
+      }
+    }
+
     return row;
   });
 
