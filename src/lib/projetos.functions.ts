@@ -41,11 +41,22 @@ export const getProjeto = createServerFn({ method: "GET" })
     if (error) throw error;
     if (!projeto) return null;
 
-    const [{ data: marcos }, { data: interacoes }] = await Promise.all([
-      context.supabase.from("marcos_com_urgencia").select("*").eq("projeto_id", data.id).order("data_prevista"),
-      context.supabase.from("interacoes").select("*, autor:usuario_id(id,nome)").eq("projeto_id", data.id).order("data_hora", { ascending: false }),
-    ]);
-    return { projeto, marcos: marcos ?? [], interacoes: interacoes ?? [] };
+    const { data: marcos } = await context.supabase
+      .from("marcos_com_urgencia").select("*").eq("projeto_id", data.id).order("data_prevista");
+    return { projeto, marcos: marcos ?? [] };
+  });
+
+export const getProjetoTimeline = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { id: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { data: interacoes, error } = await context.supabase
+      .from("interacoes")
+      .select("*, autor:usuario_id(id,nome)")
+      .eq("projeto_id", data.id)
+      .order("data_hora", { ascending: false });
+    if (error) throw error;
+    return interacoes ?? [];
   });
 
 export const upsertProjeto = createServerFn({ method: "POST" })
