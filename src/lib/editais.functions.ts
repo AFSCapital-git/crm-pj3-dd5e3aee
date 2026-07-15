@@ -48,3 +48,19 @@ export const deleteEdital = createServerFn({ method: "POST" })
     if (error) throw error;
     return { ok: true };
   });
+
+export const setEditalAtivo = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ id: z.string().uuid(), ativo: z.boolean() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await context.supabase
+      .from("linhas_editais_finep")
+      .update({ ativo: data.ativo })
+      .eq("id", data.id)
+      .select()
+      .single();
+    if (error) throw error;
+    return row;
+  });
