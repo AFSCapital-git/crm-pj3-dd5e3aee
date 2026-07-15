@@ -402,17 +402,21 @@ function DocumentGroupCard({
               key={v.id}
               className={cn(
                 "px-4 py-3 flex items-center justify-between gap-4",
-                !v.e_versao_atual && "opacity-80",
+                v.e_versao_atual
+                  ? "bg-urgency-ok/10 border-l-4 border-l-urgency-ok"
+                  : "opacity-70",
               )}
             >
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   {v.e_versao_atual ? (
                     <Badge className="bg-urgency-ok text-urgency-ok-fg border-transparent gap-1">
-                      <Star className="h-3 w-3 fill-current" /> v{v.numero_versao} · atual
+                      <Star className="h-3 w-3 fill-current" /> Versão atual · v{v.numero_versao}
                     </Badge>
                   ) : (
-                    <Badge variant="outline">v{v.numero_versao}</Badge>
+                    <Badge variant="outline" className="text-muted-foreground">
+                      v{v.numero_versao} · arquivada
+                    </Badge>
                   )}
                   <span className="text-xs text-muted-foreground">
                     {new Date(v.criado_em).toLocaleString("pt-BR")} ·{" "}
