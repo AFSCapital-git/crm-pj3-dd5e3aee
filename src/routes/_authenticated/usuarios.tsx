@@ -37,7 +37,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   Shield, UserCog, Users, Mail, Copy, Send, Ban, RefreshCw, Plus,
-  ClipboardList, Search as SearchIcon,
+  ClipboardList, Search as SearchIcon, Clock, AlertTriangle,
+  UserPlus, UserMinus, UserCheck, Ban as BanIcon, KeyRound, MailCheck,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/usuarios")({
@@ -52,7 +53,7 @@ export const Route = createFileRoute("/_authenticated/usuarios")({
   component: AdminPage,
 });
 
-// ---------- helpers de UI ----------
+// ---------- helpers ----------
 
 function RoleBadge({ role }: { role: string }) {
   if (role === "admin") {
@@ -70,24 +71,146 @@ function RoleBadge({ role }: { role: string }) {
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, { label: string; cls: string }> = {
-    ativo: { label: "Ativo", cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30" },
-    convidado: { label: "Convidado", cls: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30" },
-    desativado: { label: "Desativado", cls: "bg-muted text-muted-foreground border-border" },
+  const map: Record<string, { label: string; cls: string; dot: string }> = {
+    ativo: {
+      label: "Ativo",
+      cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/40",
+      dot: "bg-emerald-500",
+    },
+    convidado: {
+      label: "Convidado",
+      cls: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/40",
+      dot: "bg-amber-500",
+    },
+    desativado: {
+      label: "Desativado",
+      cls: "bg-muted text-muted-foreground border-border",
+      dot: "bg-muted-foreground/50",
+    },
   };
   const m = map[status] ?? map.ativo;
-  return <Badge variant="outline" className={m.cls}>{m.label}</Badge>;
+  return (
+    <Badge variant="outline" className={`gap-1.5 ${m.cls}`}>
+      <span className={`inline-block h-1.5 w-1.5 rounded-full ${m.dot}`} />
+      {m.label}
+    </Badge>
+  );
 }
 
 function ConviteStatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; cls: string }> = {
-    pendente: { label: "Pendente", cls: "bg-amber-500/15 text-amber-700 border-amber-500/30" },
-    aceito: { label: "Aceito", cls: "bg-emerald-500/15 text-emerald-700 border-emerald-500/30" },
+    pendente: { label: "Pendente", cls: "bg-amber-500/15 text-amber-700 border-amber-500/40" },
+    aceito: { label: "Aceito", cls: "bg-emerald-500/15 text-emerald-700 border-emerald-500/40" },
     expirado: { label: "Expirado", cls: "bg-muted text-muted-foreground border-border" },
-    revogado: { label: "Revogado", cls: "bg-destructive/15 text-destructive border-destructive/30" },
+    revogado: { label: "Revogado", cls: "bg-destructive/15 text-destructive border-destructive/40" },
   };
   const m = map[status] ?? map.pendente;
   return <Badge variant="outline" className={m.cls}>{m.label}</Badge>;
+}
+
+function statusRowClass(status: string) {
+  switch (status) {
+    case "ativo": return "border-l-4 border-l-emerald-500/70";
+    case "convidado": return "border-l-4 border-l-amber-500/70";
+    case "desativado": return "border-l-4 border-l-muted-foreground/40 opacity-70";
+    default: return "";
+  }
+}
+
+/** Contagem regressiva textual + flag de urgência. */
+function expiracaoInfo(iso: string): { texto: string; tone: "ok" | "warn" | "danger" | "expired" } {
+  const ms = new Date(iso).getTime() - Date.now();
+  if (ms <= 0) return { texto: "Expirado", tone: "expired" };
+  const dias = Math.floor(ms / 86400000);
+  const horas = Math.floor((ms % 86400000) / 3600000);
+  if (dias >= 3) return { texto: `expira em ${dias} dias`, tone: "ok" };
+  if (dias >= 1) return { texto: `expira em ${dias} dia${dias > 1 ? "s" : ""}`, tone: "warn" };
+  if (horas >= 1) return { texto: `expira em ${horas}h`, tone: "danger" };
+  const min = Math.max(1, Math.floor(ms / 60000));
+  return { texto: `expira em ${min}min`, tone: "danger" };
+}
+
+function ExpiracaoBadge({ iso }: { iso: string }) {
+  const info = expiracaoInfo(iso);
+  const cls =
+    info.tone === "ok" ? "bg-muted text-muted-foreground border-border"
+    : info.tone === "warn" ? "bg-amber-500/15 text-amber-700 border-amber-500/40"
+    : info.tone === "danger" ? "bg-destructive/15 text-destructive border-destructive/40"
+    : "bg-destructive/15 text-destructive border-destructive/40";
+  return (
+    <Badge variant="outline" className={`gap-1 ${cls}`}>
+      <Clock className="h-3 w-3" /> {info.texto}
+    </Badge>
+  );
+}
+
+function fmtData(iso: string) {
+  return new Date(iso).toLocaleString("pt-BR", {
+    day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
+}
+
+function fmtDataCurta(iso: string) {
+  return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+}
+
+// Frase legível para cada entrada de auditoria
+function descreverLog(l: any): { icon: React.ReactNode; frase: React.ReactNode } {
+  const executor = <strong>{l.executor_nome ?? "Sistema"}</strong>;
+  const d = l.detalhes_da_acao ?? {};
+  const alvoNome = l.afetado_nome ?? d.email ?? "usuário";
+  const alvo = <strong>{alvoNome}</strong>;
+  const papel = d.papel ?? d.para ?? "usuário";
+  const quando = fmtDataCurta(l.data_hora);
+
+  switch (l.acao) {
+    case "convite_enviado":
+      return {
+        icon: <UserPlus className="h-4 w-4 text-amber-600" />,
+        frase: <>{executor} convidou {alvo} como <em>{papel}</em> em {quando}</>,
+      };
+    case "convite_reenviado":
+      return {
+        icon: <RefreshCw className="h-4 w-4 text-amber-600" />,
+        frase: <>{executor} reenviou o convite para {alvo} em {quando}</>,
+      };
+    case "convite_revogado":
+      return {
+        icon: <BanIcon className="h-4 w-4 text-destructive" />,
+        frase: <>{executor} revogou o convite de {alvo} em {quando}</>,
+      };
+    case "convite_aceito":
+      return {
+        icon: <MailCheck className="h-4 w-4 text-emerald-600" />,
+        frase: <>{alvo} aceitou o convite como <em>{papel}</em> em {quando}</>,
+      };
+    case "papel_alterado":
+      return {
+        icon: <KeyRound className="h-4 w-4 text-primary" />,
+        frase: (
+          <>
+            {executor} alterou o papel de {alvo}
+            {d.de ? <> de <em>{d.de}</em></> : null} para <em>{d.para}</em> em {quando}
+          </>
+        ),
+      };
+    case "usuario_desativado":
+      return {
+        icon: <UserMinus className="h-4 w-4 text-destructive" />,
+        frase: <>{executor} desativou {alvo} em {quando}</>,
+      };
+    case "usuario_reativado":
+      return {
+        icon: <UserCheck className="h-4 w-4 text-emerald-600" />,
+        frase: <>{executor} reativou {alvo} em {quando}</>,
+      };
+    default:
+      return {
+        icon: <ClipboardList className="h-4 w-4 text-muted-foreground" />,
+        frase: <>{executor} executou <em>{l.acao}</em> em {quando}</>,
+      };
+  }
 }
 
 const ACAO_LABEL: Record<string, string> = {
@@ -117,10 +240,10 @@ function AdminPage() {
         </p>
       </div>
       <Tabs defaultValue="usuarios">
-        <TabsList>
-          <TabsTrigger value="usuarios" className="gap-1"><Users className="h-4 w-4" /> Usuários</TabsTrigger>
-          <TabsTrigger value="convites" className="gap-1"><Mail className="h-4 w-4" /> Convites</TabsTrigger>
-          <TabsTrigger value="log" className="gap-1"><ClipboardList className="h-4 w-4" /> Log de auditoria</TabsTrigger>
+        <TabsList className="w-full sm:w-auto grid grid-cols-3 sm:inline-flex">
+          <TabsTrigger value="usuarios" className="gap-1"><Users className="h-4 w-4" /> <span className="hidden sm:inline">Usuários</span></TabsTrigger>
+          <TabsTrigger value="convites" className="gap-1"><Mail className="h-4 w-4" /> <span className="hidden sm:inline">Convites</span></TabsTrigger>
+          <TabsTrigger value="log" className="gap-1"><ClipboardList className="h-4 w-4" /> <span className="hidden sm:inline">Auditoria</span></TabsTrigger>
         </TabsList>
         <TabsContent value="usuarios" className="mt-4"><UsuariosTab /></TabsContent>
         <TabsContent value="convites" className="mt-4"><ConvitesTab /></TabsContent>
@@ -157,7 +280,8 @@ function UsuariosTab() {
     });
   }, [users, busca, filtroStatus, filtroPapel]);
 
-  const [deactivating, setDeactivating] = useState<UsuarioRow | null>(null);
+  // Confirmação para desativar (sempre, mesmo sem carteira)
+  const [confirmDeactivate, setConfirmDeactivate] = useState<UsuarioRow | null>(null);
   const [reassigning, setReassigning] = useState<UsuarioRow | null>(null);
   const [reassignTo, setReassignTo] = useState("");
   const [editing, setEditing] = useState<UsuarioRow | null>(null);
@@ -196,39 +320,45 @@ function UsuariosTab() {
 
   const activeConsultores = users.filter((u) => u.status === "ativo" && u.id !== reassigning?.id);
 
+  function pedirDesativacao(u: UsuarioRow) {
+    setConfirmDeactivate(u);
+  }
+
   return (
     <div className="space-y-4">
       <Card>
-        <CardContent className="pt-6 flex flex-wrap items-end gap-3">
-          <div className="flex-1 min-w-[220px]">
+        <CardContent className="pt-6 flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-3">
+          <div className="flex-1 min-w-[200px]">
             <Label>Buscar</Label>
             <div className="relative">
               <SearchIcon className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input className="pl-8" placeholder="Nome ou e-mail" value={busca} onChange={(e) => setBusca(e.target.value)} />
             </div>
           </div>
-          <div>
-            <Label>Status</Label>
-            <Select value={filtroStatus} onValueChange={setFiltroStatus}>
-              <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos</SelectItem>
-                <SelectItem value="ativo">Ativo</SelectItem>
-                <SelectItem value="convidado">Convidado</SelectItem>
-                <SelectItem value="desativado">Desativado</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label>Papel</Label>
-            <Select value={filtroPapel} onValueChange={setFiltroPapel}>
-              <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="consultor">Consultor</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 sm:flex gap-3">
+            <div>
+              <Label>Status</Label>
+              <Select value={filtroStatus} onValueChange={setFiltroStatus}>
+                <SelectTrigger className="w-full sm:w-[160px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  <SelectItem value="ativo">Ativo</SelectItem>
+                  <SelectItem value="convidado">Convidado</SelectItem>
+                  <SelectItem value="desativado">Desativado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Papel</Label>
+              <Select value={filtroPapel} onValueChange={setFiltroPapel}>
+                <SelectTrigger className="w-full sm:w-[160px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="consultor">Consultor</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -241,88 +371,148 @@ function UsuariosTab() {
           {q.isLoading ? <p>Carregando…</p> : filtered.length === 0 ? (
             <p className="text-sm text-muted-foreground py-6 text-center">Nenhum usuário encontrado com esses filtros.</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>E-mail</TableHead>
-                  <TableHead>Papel</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Último login</TableHead>
-                  <TableHead>Carteira</TableHead>
-                  <TableHead />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* Tabela desktop */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>E-mail</TableHead>
+                      <TableHead>Papel</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Último login</TableHead>
+                      <TableHead>Carteira</TableHead>
+                      <TableHead />
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.map((u) => (
+                      <TableRow key={u.id} className={statusRowClass(u.status)}>
+                        <TableCell className="font-medium">{u.nome}</TableCell>
+                        <TableCell className="text-muted-foreground">{u.email}</TableCell>
+                        <TableCell className="space-x-1">
+                          {u.roles.length === 0 ? <span className="text-xs text-muted-foreground">—</span>
+                            : u.roles.map((r) => <RoleBadge key={r} role={r} />)}
+                        </TableCell>
+                        <TableCell><StatusBadge status={u.status} /></TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {u.ultimo_login ? fmtData(u.ultimo_login) : "—"}
+                        </TableCell>
+                        <TableCell>
+                          <span className="inline-flex items-center gap-1 text-sm">
+                            <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                            {u.empresas_count}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Switch
+                              checked={u.status === "ativo"}
+                              disabled={mStatus.isPending}
+                              onCheckedChange={(v) => {
+                                if (!v) pedirDesativacao(u);
+                                else mStatus.mutate({ user_id: u.id, status: "ativo" });
+                              }}
+                            />
+                            <Button size="sm" variant="outline" onClick={() => {
+                              setEditing(u);
+                              setNovoPapel((u.roles.includes("admin") ? "admin" : "consultor"));
+                            }}>Editar</Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Cards mobile */}
+              <div className="md:hidden space-y-3">
                 {filtered.map((u) => (
-                  <TableRow key={u.id}>
-                    <TableCell className="font-medium">{u.nome}</TableCell>
-                    <TableCell className="text-muted-foreground">{u.email}</TableCell>
-                    <TableCell className="space-x-1">
-                      {u.roles.length === 0 ? <span className="text-xs text-muted-foreground">—</span>
+                  <div key={u.id} className={`rounded-lg border bg-card p-3 ${statusRowClass(u.status)}`}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="font-medium truncate">{u.nome}</div>
+                        <div className="text-xs text-muted-foreground truncate">{u.email}</div>
+                      </div>
+                      <StatusBadge status={u.status} />
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      {u.roles.length === 0 ? <span className="text-xs text-muted-foreground">Sem papel</span>
                         : u.roles.map((r) => <RoleBadge key={r} role={r} />)}
-                    </TableCell>
-                    <TableCell><StatusBadge status={u.status} /></TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {u.ultimo_login ? new Date(u.ultimo_login).toLocaleString("pt-BR") : "—"}
-                    </TableCell>
-                    <TableCell>
-                      <span className="inline-flex items-center gap-1 text-sm">
-                        <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                        {u.empresas_count}
+                      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                        <Users className="h-3 w-3" /> {u.empresas_count} clientes
                       </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      Último login: {u.ultimo_login ? fmtData(u.ultimo_login) : "—"}
+                    </div>
+                    <div className="mt-3 flex items-center justify-between">
+                      <label className="flex items-center gap-2 text-sm">
                         <Switch
                           checked={u.status === "ativo"}
                           disabled={mStatus.isPending}
                           onCheckedChange={(v) => {
-                            if (!v && u.empresas_count > 0) setDeactivating(u);
-                            else mStatus.mutate({ user_id: u.id, status: v ? "ativo" : "desativado" });
+                            if (!v) pedirDesativacao(u);
+                            else mStatus.mutate({ user_id: u.id, status: "ativo" });
                           }}
                         />
-                        <Button size="sm" variant="outline" onClick={() => {
-                          setEditing(u);
-                          setNovoPapel((u.roles.includes("admin") ? "admin" : "consultor"));
-                        }}>Editar</Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                        {u.status === "ativo" ? "Ativo" : "Desativado"}
+                      </label>
+                      <Button size="sm" variant="outline" onClick={() => {
+                        setEditing(u);
+                        setNovoPapel((u.roles.includes("admin") ? "admin" : "consultor"));
+                      }}>Editar papel</Button>
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
 
-      {/* Desativação com carteira */}
-      <AlertDialog open={!!deactivating} onOpenChange={(o) => !o && setDeactivating(null)}>
+      {/* Confirmação de desativação (sempre) */}
+      <AlertDialog open={!!confirmDeactivate} onOpenChange={(o) => !o && setConfirmDeactivate(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Desativar {deactivating?.nome}?</AlertDialogTitle>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Desativar {confirmDeactivate?.nome}?
+            </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-2 text-sm">
-                <p>
-                  Este consultor é responsável por <strong>{deactivating?.empresas_count} cliente(s)</strong>.
-                  Ao desativar:
-                </p>
+                <p>Ao confirmar, este usuário:</p>
                 <ul className="list-disc pl-5 space-y-1">
-                  <li>Clientes e projetos <strong>permanecem no sistema</strong>.</li>
-                  <li>Ficam <strong>sem consultor ativo</strong> até serem reatribuídos.</li>
-                  <li>A sessão do usuário é <strong>encerrada imediatamente</strong>.</li>
+                  <li>Terá a <strong>sessão encerrada imediatamente</strong> e não poderá mais acessar o sistema.</li>
+                  {(confirmDeactivate?.empresas_count ?? 0) > 0 ? (
+                    <li>
+                      Deixará <strong>{confirmDeactivate?.empresas_count} cliente(s)</strong> sem consultor ativo — você
+                      será levado à tela de reatribuição em seguida.
+                    </li>
+                  ) : (
+                    <li>Não possui carteira de clientes — nenhuma reatribuição será necessária.</li>
+                  )}
+                  <li>Poderá ser reativado depois; o histórico é sempre preservado.</li>
                 </ul>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => {
-              if (deactivating) {
-                mStatus.mutate({ user_id: deactivating.id, status: "desativado" });
-                setReassigning(deactivating); setDeactivating(null);
-              }
-            }}>Desativar e reatribuir</AlertDialogAction>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (!confirmDeactivate) return;
+                const u = confirmDeactivate;
+                mStatus.mutate({ user_id: u.id, status: "desativado" });
+                if (u.empresas_count > 0) setReassigning(u);
+                setConfirmDeactivate(null);
+              }}
+            >
+              Desativar
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -351,7 +541,7 @@ function UsuariosTab() {
             </Select>
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => { setReassigning(null); setReassignTo(""); }}>Cancelar</Button>
+            <Button variant="ghost" onClick={() => { setReassigning(null); setReassignTo(""); }}>Depois</Button>
             <Button disabled={!reassignTo || mReassign.isPending}
               onClick={() => {
                 if (reassigning && reassignTo)
@@ -410,6 +600,7 @@ function ConvitesTab() {
   const [papel, setPapel] = useState<"admin" | "consultor">("consultor");
   const [nome, setNome] = useState("");
   const [linkGerado, setLinkGerado] = useState<{ link: string; email: string } | null>(null);
+  const [confirmRevogar, setConfirmRevogar] = useState<any | null>(null);
 
   function buildLink(token: string) {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
@@ -446,6 +637,7 @@ function ConvitesTab() {
       toast.success("Convite revogado");
       qc.invalidateQueries({ queryKey: ["admin-convites"] });
       qc.invalidateQueries({ queryKey: ["admin-log"] });
+      setConfirmRevogar(null);
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -462,7 +654,9 @@ function ConvitesTab() {
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <Button onClick={() => setOpenNovo(true)} className="gap-1"><Plus className="h-4 w-4" /> Convidar usuário</Button>
+        <Button onClick={() => setOpenNovo(true)} className="gap-1 w-full sm:w-auto">
+          <Plus className="h-4 w-4" /> Convidar usuário
+        </Button>
       </div>
 
       <Card>
@@ -471,43 +665,72 @@ function ConvitesTab() {
           {pendentes.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-6">Nenhum convite pendente.</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>E-mail</TableHead>
-                  <TableHead>Papel</TableHead>
-                  <TableHead>Enviado em</TableHead>
-                  <TableHead>Expira em</TableHead>
-                  <TableHead />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* Desktop */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>E-mail</TableHead>
+                      <TableHead>Papel</TableHead>
+                      <TableHead>Enviado em</TableHead>
+                      <TableHead>Validade</TableHead>
+                      <TableHead />
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {pendentes.map((c) => (
+                      <TableRow key={c.id}>
+                        <TableCell className="font-medium">{c.email_convidado}</TableCell>
+                        <TableCell><RoleBadge role={c.papel_designado} /></TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{fmtData(c.criado_em)}</TableCell>
+                        <TableCell><ExpiracaoBadge iso={c.data_expiracao} /></TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button size="sm" variant="outline" disabled={mReenviar.isPending}
+                              onClick={() => mReenviar.mutate(c.id)}>
+                              <RefreshCw className="h-3.5 w-3.5 mr-1" /> Reenviar
+                            </Button>
+                            <Button size="sm" variant="ghost" className="text-destructive"
+                              onClick={() => setConfirmRevogar(c)}>
+                              <Ban className="h-3.5 w-3.5 mr-1" /> Revogar
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile */}
+              <div className="md:hidden space-y-3">
                 {pendentes.map((c) => (
-                  <TableRow key={c.id}>
-                    <TableCell className="font-medium">{c.email_convidado}</TableCell>
-                    <TableCell><RoleBadge role={c.papel_designado} /></TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {new Date(c.criado_em).toLocaleString("pt-BR")}
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {new Date(c.data_expiracao).toLocaleString("pt-BR")}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button size="sm" variant="outline" disabled={mReenviar.isPending}
-                          onClick={() => mReenviar.mutate(c.id)}>
-                          <RefreshCw className="h-3.5 w-3.5 mr-1" /> Reenviar
-                        </Button>
-                        <Button size="sm" variant="ghost" className="text-destructive"
-                          disabled={mRevogar.isPending} onClick={() => mRevogar.mutate(c.id)}>
-                          <Ban className="h-3.5 w-3.5 mr-1" /> Revogar
-                        </Button>
+                  <div key={c.id} className="rounded-lg border bg-card p-3 border-l-4 border-l-amber-500/70">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="font-medium break-all">{c.email_convidado}</div>
+                        <div className="mt-1"><RoleBadge role={c.papel_designado} /></div>
                       </div>
-                    </TableCell>
-                  </TableRow>
+                      <ExpiracaoBadge iso={c.data_expiracao} />
+                    </div>
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      Enviado em {fmtData(c.criado_em)}
+                    </div>
+                    <div className="mt-3 flex gap-2">
+                      <Button size="sm" variant="outline" className="flex-1" disabled={mReenviar.isPending}
+                        onClick={() => mReenviar.mutate(c.id)}>
+                        <RefreshCw className="h-3.5 w-3.5 mr-1" /> Reenviar
+                      </Button>
+                      <Button size="sm" variant="outline" className="flex-1 text-destructive"
+                        onClick={() => setConfirmRevogar(c)}>
+                        <Ban className="h-3.5 w-3.5 mr-1" /> Revogar
+                      </Button>
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
@@ -516,32 +739,52 @@ function ConvitesTab() {
         <Card>
           <CardHeader><CardTitle>Histórico de convites</CardTitle></CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>E-mail</TableHead>
-                  <TableHead>Papel</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Enviado</TableHead>
-                  <TableHead>Aceito</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {historico.map((c) => (
-                  <TableRow key={c.id}>
-                    <TableCell>{c.email_convidado}</TableCell>
-                    <TableCell><RoleBadge role={c.papel_designado} /></TableCell>
-                    <TableCell><ConviteStatusBadge status={c.status} /></TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {new Date(c.criado_em).toLocaleString("pt-BR")}
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {c.aceito_em ? new Date(c.aceito_em).toLocaleString("pt-BR") : "—"}
-                    </TableCell>
+            {/* Desktop */}
+            <div className="hidden md:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>E-mail</TableHead>
+                    <TableHead>Papel</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Enviado</TableHead>
+                    <TableHead>Aceito</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {historico.map((c) => (
+                    <TableRow key={c.id}>
+                      <TableCell>{c.email_convidado}</TableCell>
+                      <TableCell><RoleBadge role={c.papel_designado} /></TableCell>
+                      <TableCell><ConviteStatusBadge status={c.status} /></TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{fmtData(c.criado_em)}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {c.aceito_em ? fmtData(c.aceito_em) : "—"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Mobile */}
+            <div className="md:hidden space-y-2">
+              {historico.map((c) => (
+                <div key={c.id} className="rounded-lg border bg-card p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 font-medium break-all">{c.email_convidado}</div>
+                    <ConviteStatusBadge status={c.status} />
+                  </div>
+                  <div className="mt-1 flex items-center gap-2">
+                    <RoleBadge role={c.papel_designado} />
+                  </div>
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    Enviado {fmtData(c.criado_em)}
+                    {c.aceito_em ? ` · Aceito ${fmtData(c.aceito_em)}` : ""}
+                  </div>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       )}
@@ -606,6 +849,39 @@ function ConvitesTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Confirmar revogação */}
+      <AlertDialog open={!!confirmRevogar} onOpenChange={(o) => !o && setConfirmRevogar(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Revogar convite de {confirmRevogar?.email_convidado}?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm">
+                <p>Ao confirmar:</p>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>O link enviado deixa de funcionar <strong>imediatamente</strong>.</li>
+                  <li>O convidado <strong>não poderá</strong> mais definir senha nem acessar o sistema por este convite.</li>
+                  <li>O convite ficará registrado no histórico como <em>revogado</em>.</li>
+                  <li>Você pode gerar um novo convite para o mesmo e-mail depois.</li>
+                </ul>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={mRevogar.isPending}
+              onClick={() => confirmRevogar && mRevogar.mutate(confirmRevogar.id)}
+            >
+              {mRevogar.isPending ? "Revogando…" : "Revogar convite"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -631,49 +907,39 @@ function LogTab() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="flex items-end gap-2">
-            <div>
-              <Label>Filtrar por ação</Label>
-              <Select value={filtroAcao} onValueChange={setFiltroAcao}>
-                <SelectTrigger className="w-[220px]"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todas">Todas</SelectItem>
-                  {Object.entries(ACAO_LABEL).map(([k, v]) => (
-                    <SelectItem key={k} value={k}>{v}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div>
+            <Label>Filtrar por ação</Label>
+            <Select value={filtroAcao} onValueChange={setFiltroAcao}>
+              <SelectTrigger className="w-full sm:w-[240px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todas">Todas</SelectItem>
+                {Object.entries(ACAO_LABEL).map(([k, v]) => (
+                  <SelectItem key={k} value={k}>{v}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           {q.isLoading ? <p>Carregando…</p> : logs.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-6">Nenhum registro encontrado.</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Data/hora</TableHead>
-                  <TableHead>Ação</TableHead>
-                  <TableHead>Executor</TableHead>
-                  <TableHead>Alvo</TableHead>
-                  <TableHead>Detalhes</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {logs.map((l) => (
-                  <TableRow key={l.id}>
-                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                      {new Date(l.data_hora).toLocaleString("pt-BR")}
-                    </TableCell>
-                    <TableCell><Badge variant="outline">{ACAO_LABEL[l.acao] ?? l.acao}</Badge></TableCell>
-                    <TableCell className="text-sm">{l.executor_nome}</TableCell>
-                    <TableCell className="text-sm">{l.afetado_nome ?? "—"}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground font-mono max-w-[360px] truncate">
-                      {JSON.stringify(l.detalhes_da_acao)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <ul className="divide-y">
+              {logs.map((l) => {
+                const { icon, frase } = descreverLog(l);
+                return (
+                  <li key={l.id} className="flex items-start gap-3 py-3">
+                    <div className="mt-0.5 shrink-0 grid h-8 w-8 place-items-center rounded-full bg-muted">
+                      {icon}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm leading-snug">{frase}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {new Date(l.data_hora).toLocaleString("pt-BR")}
+                      </p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </CardContent>
       </Card>
