@@ -589,6 +589,8 @@ function UploadForm({
   requireDescription?: boolean;
 }) {
   const [descricao, setDescricao] = useState("");
+  const [progress, setProgress] = useState<number | null>(null);
+  const [phase, setPhase] = useState<"idle" | "uploading" | "registering">("idle");
   const qc = useQueryClient();
   const registerFn = useServerFn(registerDocumentoVersion);
 
@@ -599,13 +601,19 @@ function UploadForm({
       const stamp = Date.now();
       const path = `${storagePrefix(owner)}/${grupoId}/${stamp}-${safeName}`;
 
-      const { error: upErr } = await supabase.storage
-        .from(BUCKET)
-        .upload(path, file, { contentType: file.type || undefined, upsert: false });
-      if (upErr) throw upErr;
-
+      setPhase("uploading");
+      setProgress(0);
       try {
-        return await registerFn({
+        await uploadWithProgress(path, file, (p) => setProgress(p));
+      } catch (e) {
+        setPhase("idle");
+        setProgress(null);
+        throw e;
+      }
+
+      setPhase("registering");
+      try {
+        const row = await registerFn({
           data: {
             projeto_id: owner.kind === "projeto" ? owner.projetoId : null,
             empresa_cliente_id: owner.kind === "empresa" ? owner.empresaId : null,
@@ -618,24 +626,37 @@ function UploadForm({
             descricao_da_versao: descricao,
           },
         });
+        return row;
       } catch (e) {
         await supabase.storage.from(BUCKET).remove([path]).catch(() => {});
         throw e;
+      } finally {
+        setPhase("idle");
       }
     },
-    onSuccess: () => {
-      toast.success("Documento enviado");
+    onSuccess: (row: any) => {
+      const versao = row?.numero_versao;
+      toast.success(
+        versao
+          ? `"${file.name}" enviado como versão ${versao}`
+          : "Documento enviado",
+      );
       qc.invalidateQueries({ queryKey: ["documentos", owner.kind, ownerKey(owner)] });
       if (owner.kind === "projeto") {
         qc.invalidateQueries({ queryKey: ["projeto", owner.projetoId] });
       } else {
         qc.invalidateQueries({ queryKey: ["empresa", owner.empresaId] });
       }
+      setProgress(null);
       onDone();
     },
-    onError: (e: unknown) =>
-      toast.error(e instanceof Error ? e.message : "Falha no upload"),
+    onError: (e: unknown) => {
+      setProgress(null);
+      toast.error(e instanceof Error ? e.message : "Falha no upload");
+    },
   });
+
+  const busy = m.isPending;
 
   return (
     <form
@@ -664,11 +685,22 @@ function UploadForm({
           onChange={(e) => setDescricao(e.target.value)}
           placeholder="Ex.: revisão após feedback do FINEP"
           required={requireDescription}
+          disabled={busy}
         />
       </div>
+      {busy && (
+        <div className="space-y-1">
+          <Progress value={phase === "registering" ? 100 : progress ?? 0} />
+          <p className="text-xs text-muted-foreground">
+            {phase === "uploading"
+              ? `Enviando… ${progress ?? 0}%`
+              : "Registrando nova versão…"}
+          </p>
+        </div>
+      )}
       <DialogFooter>
-        <Button type="submit" disabled={m.isPending}>
-          {m.isPending ? "Enviando…" : "Enviar"}
+        <Button type="submit" disabled={busy}>
+          {busy ? "Enviando…" : "Enviar"}
         </Button>
       </DialogFooter>
     </form>
