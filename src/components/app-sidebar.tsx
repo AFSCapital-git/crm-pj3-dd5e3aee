@@ -63,7 +63,7 @@ export function AppSidebar() {
                   <SidebarMenuButton asChild isActive={isActive("/usuarios")}>
                     <Link to="/usuarios" className="flex items-center gap-2">
                       <Users className="h-4 w-4" />
-                      <span>Usuários</span>
+                      <span>Administração</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

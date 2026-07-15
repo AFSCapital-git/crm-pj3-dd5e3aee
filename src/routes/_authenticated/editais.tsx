@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,21 +33,78 @@ import {
 } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+<<<<<<< HEAD
 import { Plus, Pencil, Trash2, ChevronDown } from "lucide-react";
 import { upsertEdital, deleteEdital } from "@/lib/editais.functions";
 import { categoriaEditalLabel, formatBRL, formatDate } from "@/lib/labels";
 import { listEditaisPaginado } from "@/lib/pagination.functions";
 import { usePaginatedQuery } from "@/hooks/use-paginated-query";
+=======
+import { Plus, Pencil, Trash2, FileSearch, AlertTriangle } from "lucide-react";
+import { listEditais, upsertEdital, deleteEdital, setEditalAtivo } from "@/lib/editais.functions";
+import { categoriaEditalLabel, formatBRL, formatDate } from "@/lib/labels";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+>>>>>>> 1b78db33cd458632241ee46c1aee77bd182e17de
 
 export const Route = createFileRoute("/_authenticated/editais")({
   component: EditaisPage,
 });
 
+type EditalRow = {
+  id: string;
+  nome: string;
+  categoria: string;
+  orgao: string | null;
+  valor_maximo_edital: number | null;
+  prazo_submissao: string | null;
+  ativo: boolean;
+  requisitos_elegibilidade: string | null;
+};
+
+function diasParaPrazo(prazo: string | null): number | null {
+  if (!prazo) return null;
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  const p = new Date(prazo);
+  p.setHours(0, 0, 0, 0);
+  return Math.round((p.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function PrazoBadge({ prazo }: { prazo: string | null }) {
+  const dias = diasParaPrazo(prazo);
+  if (dias === null) return null;
+  if (dias < 0)
+    return <Badge className="bg-urgency-overdue text-urgency-overdue-fg border-transparent">Encerrado</Badge>;
+  if (dias <= 7)
+    return (
+      <Badge className="bg-urgency-critical text-urgency-critical-fg border-transparent gap-1">
+        <AlertTriangle className="h-3 w-3" /> {dias === 0 ? "Vence hoje" : `${dias}d`}
+      </Badge>
+    );
+  if (dias <= 15)
+    return <Badge className="bg-urgency-warning text-urgency-warning-fg border-transparent">≤ 15 dias</Badge>;
+  if (dias <= 30)
+    return <Badge className="bg-urgency-notice text-urgency-notice-fg border-transparent">≤ 30 dias</Badge>;
+  return <Badge className="bg-urgency-ok text-urgency-ok-fg border-transparent">Aberto</Badge>;
+}
+
 function EditaisPage() {
   const listFn = useServerFn(listEditaisPaginado);
   const upsert = useServerFn(upsertEdital);
   const del = useServerFn(deleteEdital);
+  const setAtivo = useServerFn(setEditalAtivo);
   const qc = useQueryClient();
+<<<<<<< HEAD
   const { items, loadMore, hasMore, isLoadingMore, isLoading, error } = usePaginatedQuery(
     ["editais-paginated"],
     (cursor) => listFn({ data: { cursor, pageSize: 50 } }),
@@ -64,25 +121,55 @@ function EditaisPage() {
       setEditing(null);
     },
     onError: (e: Error) => toast.error(e.message),
+=======
+  const q = useQuery({ queryKey: ["editais"], queryFn: () => list() });
+  const [editing, setEditing] = useState<EditalRow | null>(null);
+  const [open, setOpen] = useState(false);
+
+  const mUpsert = useMutation({
+    mutationFn: (input: { id?: string; values: any }) => upsert({ data: input }),
+    onSuccess: () => {
+      toast.success("Edital salvo");
+      qc.invalidateQueries({ queryKey: ["editais"] });
+      setOpen(false);
+      setEditing(null);
+    },
+    onError: (e: any) => toast.error(e.message),
+>>>>>>> 1b78db33cd458632241ee46c1aee77bd182e17de
   });
   const mDelete = useMutation({
     mutationFn: (id: string) => del({ data: { id } }),
     onSuccess: () => {
       toast.success("Removido");
+<<<<<<< HEAD
       qc.invalidateQueries({ queryKey: ["editais-paginated"] });
     },
     onError: (e: Error) => toast.error(e.message),
+=======
+      qc.invalidateQueries({ queryKey: ["editais"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+  const mToggle = useMutation({
+    mutationFn: (v: { id: string; ativo: boolean }) => setAtivo({ data: v }),
+    onSuccess: (_r, v) => {
+      toast.success(v.ativo ? "Edital ativado" : "Edital inativado");
+      qc.invalidateQueries({ queryKey: ["editais"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+>>>>>>> 1b78db33cd458632241ee46c1aee77bd182e17de
   });
 
-  const today = new Date().toISOString().slice(0, 10);
+  const rows = (q.data ?? []) as EditalRow[];
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Editais FINEP</h1>
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
+        <div className="min-w-0">
+          <h1 className="truncate text-2xl font-semibold tracking-tight">Editais FINEP</h1>
           <p className="text-sm text-muted-foreground">Catálogo de linhas de financiamento.</p>
         </div>
+<<<<<<< HEAD
         <Dialog
           open={open}
           onOpenChange={(o) => {
@@ -95,6 +182,11 @@ function EditaisPage() {
               <Plus className="mr-2 h-4 w-4" />
               Novo edital
             </Button>
+=======
+        <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setEditing(null); }}>
+          <DialogTrigger asChild>
+            <Button className="shrink-0"><Plus className="mr-2 h-4 w-4" />Novo edital</Button>
+>>>>>>> 1b78db33cd458632241ee46c1aee77bd182e17de
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
@@ -111,6 +203,7 @@ function EditaisPage() {
         </Dialog>
       </div>
 
+<<<<<<< HEAD
       <Card>
         <CardHeader>
           <CardTitle>
@@ -125,6 +218,30 @@ function EditaisPage() {
             <p className="text-destructive">{error.message}</p>
           ) : (
             <>
+=======
+      {q.isLoading ? (
+        <Card><CardContent className="pt-6"><p>Carregando…</p></CardContent></Card>
+      ) : rows.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
+            <div className="grid h-12 w-12 place-items-center rounded-full bg-muted">
+              <FileSearch className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <div>
+              <p className="font-medium">Nenhum item cadastrado ainda</p>
+              <p className="text-sm text-muted-foreground">Cadastre o primeiro edital do catálogo para começar.</p>
+            </div>
+            <Button onClick={() => { setEditing(null); setOpen(true); }}>
+              <Plus className="mr-2 h-4 w-4" /> Cadastrar primeiro edital
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          {/* Desktop: table */}
+          <Card className="hidden md:block">
+            <CardContent className="pt-6">
+>>>>>>> 1b78db33cd458632241ee46c1aee77bd182e17de
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -138,6 +255,7 @@ function EditaisPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
+<<<<<<< HEAD
                   {items.map((e: Record<string, unknown>) => {
                     const aberto = e.prazo_submissao && e.prazo_submissao >= today;
                     return (
@@ -203,10 +321,95 @@ function EditaisPage() {
           )}
         </CardContent>
       </Card>
+=======
+                  {rows.map((e) => (
+                    <TableRow key={e.id}>
+                      <TableCell className="font-medium">{e.nome}</TableCell>
+                      <TableCell>{categoriaEditalLabel(e.categoria)}</TableCell>
+                      <TableCell>{e.orgao ?? "—"}</TableCell>
+                      <TableCell>{formatBRL(e.valor_maximo_edital)}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <span>{formatDate(e.prazo_submissao)}</span>
+                          <PrazoBadge prazo={e.prazo_submissao} />
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={e.ativo}
+                            disabled={mToggle.isPending}
+                            onCheckedChange={(v) => mToggle.mutate({ id: e.id, ativo: v })}
+                            aria-label={e.ativo ? "Inativar edital" : "Ativar edital"}
+                          />
+                          <span className="text-xs text-muted-foreground">{e.ativo ? "Ativo" : "Inativo"}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right space-x-1">
+                        <Button size="icon" variant="ghost" onClick={() => { setEditing(e); setOpen(true); }}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <RemoveButton onConfirm={() => mDelete.mutate(e.id)} nome={e.nome} />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          {/* Mobile: cards */}
+          <div className="grid gap-3 md:hidden">
+            {rows.map((e) => (
+              <Card key={e.id}>
+                <CardContent className="pt-4 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-medium truncate">{e.nome}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {categoriaEditalLabel(e.categoria)} · {e.orgao ?? "—"}
+                      </p>
+                    </div>
+                    <PrazoBadge prazo={e.prazo_submissao} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Valor máx.</p>
+                      <p>{formatBRL(e.valor_maximo_edital)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Prazo</p>
+                      <p>{formatDate(e.prazo_submissao)}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between border-t pt-3">
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={e.ativo}
+                        disabled={mToggle.isPending}
+                        onCheckedChange={(v) => mToggle.mutate({ id: e.id, ativo: v })}
+                      />
+                      <span className="text-xs text-muted-foreground">{e.ativo ? "Ativo" : "Inativo"}</span>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button size="icon" variant="ghost" onClick={() => { setEditing(e); setOpen(true); }}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <RemoveButton onConfirm={() => mDelete.mutate(e.id)} nome={e.nome} />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </>
+      )}
+>>>>>>> 1b78db33cd458632241ee46c1aee77bd182e17de
     </div>
   );
 }
 
+<<<<<<< HEAD
 function EditalForm({
   initial,
   onSubmit,
@@ -216,6 +419,31 @@ function EditalForm({
   onSubmit: (values: Record<string, unknown>) => void;
   loading: boolean;
 }) {
+=======
+function RemoveButton({ onConfirm, nome }: { onConfirm: () => void; nome: string }) {
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button size="icon" variant="ghost"><Trash2 className="h-4 w-4" /></Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Remover edital?</AlertDialogTitle>
+          <AlertDialogDescription>
+            "{nome}" será removido do catálogo. Projetos existentes que já referenciam este edital são mantidos.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirm}>Remover</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+function EditalForm({ initial, onSubmit, loading }: any) {
+>>>>>>> 1b78db33cd458632241ee46c1aee77bd182e17de
   const [v, setV] = useState({
     nome: (initial?.nome as string) ?? "",
     categoria: (initial?.categoria as string) ?? "subvencao_economica",

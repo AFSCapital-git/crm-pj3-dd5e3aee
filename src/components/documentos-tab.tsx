@@ -18,6 +18,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -68,15 +69,57 @@ const MAX_BYTES = 25 * 1024 * 1024;
 const ACCEPT =
   ".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.webp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,image/png,image/jpeg,image/webp";
 const EXT_REGEX = /\.(pdf|docx?|xlsx?|png|jpe?g|webp)$/i;
+const ALLOWED_EXTS = "PDF, DOCX, XLSX, PNG, JPG, WEBP";
 
 function sanitize(name: string) {
   return name.replace(/[^a-zA-Z0-9._-]+/g, "_").slice(0, 120);
 }
 function validateFile(file: File): string | null {
-  if (file.size > MAX_BYTES) return "Arquivo maior que 25 MB.";
+  if (file.size === 0) return "Arquivo vazio.";
+  if (file.size > MAX_BYTES)
+    return `Arquivo muito grande (${formatFileSize(file.size)}). Limite: 25 MB.`;
   if (!EXT_REGEX.test(file.name))
-    return "Tipo não suportado. Use PDF, DOCX, XLSX, PNG, JPG ou WEBP.";
+    return `Tipo não suportado. Use ${ALLOWED_EXTS}.`;
   return null;
+}
+
+async function uploadWithProgress(
+  path: string,
+  file: File,
+  onProgress: (pct: number) => void,
+): Promise<void> {
+  const { data: sess } = await supabase.auth.getSession();
+  const token = sess.session?.access_token;
+  if (!token) throw new Error("Sessão expirada. Faça login novamente.");
+  const url = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/${BUCKET}/${path
+    .split("/")
+    .map(encodeURIComponent)
+    .join("/")}`;
+  await new Promise<void>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", url);
+    xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+    xhr.setRequestHeader("apikey", import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string);
+    xhr.setRequestHeader("x-upsert", "false");
+    if (file.type) xhr.setRequestHeader("Content-Type", file.type);
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) resolve();
+      else {
+        let msg = `Falha no upload (HTTP ${xhr.status})`;
+        try {
+          const parsed = JSON.parse(xhr.responseText);
+          if (parsed?.message) msg = parsed.message;
+        } catch {}
+        reject(new Error(msg));
+      }
+    };
+    xhr.onerror = () => reject(new Error("Falha de rede durante o upload."));
+    xhr.onabort = () => reject(new Error("Upload cancelado."));
+    xhr.send(file);
+  });
 }
 
 function ownerKey(o: Owner) {
@@ -86,9 +129,16 @@ function storagePrefix(o: Owner) {
   return o.kind === "projeto" ? o.projetoId : `empresa/${o.empresaId}`;
 }
 
+<<<<<<< HEAD
 export function DocumentosTab(
   props: { projetoId: string; empresaId?: never } | { empresaId: string; projetoId?: never },
 ) {
+=======
+
+export function DocumentosTab(props:
+  | { projetoId: string; empresaId?: never }
+  | { empresaId: string; projetoId?: never }) {
+>>>>>>> 1b78db33cd458632241ee46c1aee77bd182e17de
   const owner: Owner = props.projetoId
     ? { kind: "projeto", projetoId: props.projetoId }
     : { kind: "empresa", empresaId: props.empresaId! };
@@ -351,17 +401,21 @@ function DocumentGroupCard({
               key={v.id}
               className={cn(
                 "px-4 py-3 flex items-center justify-between gap-4",
-                !v.e_versao_atual && "opacity-80",
+                v.e_versao_atual
+                  ? "bg-urgency-ok/10 border-l-4 border-l-urgency-ok"
+                  : "opacity-70",
               )}
             >
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   {v.e_versao_atual ? (
                     <Badge className="bg-urgency-ok text-urgency-ok-fg border-transparent gap-1">
-                      <Star className="h-3 w-3 fill-current" /> v{v.numero_versao} · atual
+                      <Star className="h-3 w-3 fill-current" /> Versão atual · v{v.numero_versao}
                     </Badge>
                   ) : (
-                    <Badge variant="outline">v{v.numero_versao}</Badge>
+                    <Badge variant="outline" className="text-muted-foreground">
+                      v{v.numero_versao} · arquivada
+                    </Badge>
                   )}
                   <span className="text-xs text-muted-foreground">
                     {new Date(v.criado_em).toLocaleString("pt-BR")} · {v.autor?.nome ?? "—"} ·{" "}
@@ -532,6 +586,8 @@ function UploadForm({
   requireDescription?: boolean;
 }) {
   const [descricao, setDescricao] = useState("");
+  const [progress, setProgress] = useState<number | null>(null);
+  const [phase, setPhase] = useState<"idle" | "uploading" | "registering">("idle");
   const qc = useQueryClient();
   const registerFn = useServerFn(registerDocumentoVersion);
 
@@ -542,13 +598,19 @@ function UploadForm({
       const stamp = Date.now();
       const path = `${storagePrefix(owner)}/${grupoId}/${stamp}-${safeName}`;
 
-      const { error: upErr } = await supabase.storage
-        .from(BUCKET)
-        .upload(path, file, { contentType: file.type || undefined, upsert: false });
-      if (upErr) throw upErr;
-
+      setPhase("uploading");
+      setProgress(0);
       try {
-        return await registerFn({
+        await uploadWithProgress(path, file, (p) => setProgress(p));
+      } catch (e) {
+        setPhase("idle");
+        setProgress(null);
+        throw e;
+      }
+
+      setPhase("registering");
+      try {
+        const row = await registerFn({
           data: {
             projeto_id: owner.kind === "projeto" ? owner.projetoId : null,
             empresa_cliente_id: owner.kind === "empresa" ? owner.empresaId : null,
@@ -561,26 +623,44 @@ function UploadForm({
             descricao_da_versao: descricao,
           },
         });
+        return row;
       } catch (e) {
         await supabase.storage
           .from(BUCKET)
           .remove([path])
           .catch(() => {});
         throw e;
+      } finally {
+        setPhase("idle");
       }
     },
-    onSuccess: () => {
-      toast.success("Documento enviado");
+    onSuccess: (row: any) => {
+      const versao = row?.numero_versao;
+      toast.success(
+        versao
+          ? `"${file.name}" enviado como versão ${versao}`
+          : "Documento enviado",
+      );
       qc.invalidateQueries({ queryKey: ["documentos", owner.kind, ownerKey(owner)] });
       if (owner.kind === "projeto") {
         qc.invalidateQueries({ queryKey: ["projeto", owner.projetoId] });
       } else {
         qc.invalidateQueries({ queryKey: ["empresa", owner.empresaId] });
       }
+      setProgress(null);
       onDone();
     },
+<<<<<<< HEAD
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Falha no upload"),
+=======
+    onError: (e: unknown) => {
+      setProgress(null);
+      toast.error(e instanceof Error ? e.message : "Falha no upload");
+    },
+>>>>>>> 1b78db33cd458632241ee46c1aee77bd182e17de
   });
+
+  const busy = m.isPending;
 
   return (
     <form
@@ -607,11 +687,22 @@ function UploadForm({
           onChange={(e) => setDescricao(e.target.value)}
           placeholder="Ex.: revisão após feedback do FINEP"
           required={requireDescription}
+          disabled={busy}
         />
       </div>
+      {busy && (
+        <div className="space-y-1">
+          <Progress value={phase === "registering" ? 100 : progress ?? 0} />
+          <p className="text-xs text-muted-foreground">
+            {phase === "uploading"
+              ? `Enviando… ${progress ?? 0}%`
+              : "Registrando nova versão…"}
+          </p>
+        </div>
+      )}
       <DialogFooter>
-        <Button type="submit" disabled={m.isPending}>
-          {m.isPending ? "Enviando…" : "Enviar"}
+        <Button type="submit" disabled={busy}>
+          {busy ? "Enviando…" : "Enviar"}
         </Button>
       </DialogFooter>
     </form>

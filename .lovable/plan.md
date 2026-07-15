@@ -1,96 +1,115 @@
-## Módulo de Documentos com Versionamento
+## Módulo de Administração de Usuários, Permissões e Convites
 
-Vincula documentos a projetos (a instância do CRM é por projeto), com versionamento imutável — cada nova versão vira uma linha nova, jamais sobrescreve, e todas continuam baixáveis.
+Antes do código, aqui está o **fluxo completo de convite** e o plano de implementação. Confirme o fluxo (ou peça ajustes) antes de eu partir para a build.
 
-## Modelo de dados
+---
 
-Migration cria enum `tipo_documento` (`material` | `contrato` | `aditivo` | `relatorio` | `outro`) e tabela `documentos`:
+### Fluxo de convite (ponta a ponta)
 
-- `id` uuid PK
-- `projeto_id` → `projetos(id)` (cascade)
-- `grupo_documento_id` uuid — mesmo valor para todas as versões de um mesmo documento (gerado no upload inicial)
-- `tipo` `tipo_documento`
-- `nome_arquivo` text
-- `numero_versao` int
-- `storage_path` text (caminho no bucket privado)
-- `tamanho_arquivo` bigint (bytes)
-- `mime_type` text
-- `enviado_por` uuid → `usuarios_internos`
-- `descricao_da_versao` text
-- `e_versao_atual` boolean
-- `criado_em` timestamptz default `now()`
-- índice único parcial: `(grupo_documento_id) where e_versao_atual` — garante 1 versão atual por grupo
-- índice `(projeto_id, tipo, criado_em desc)`
+**1. Envio (admin autenticado)**
+- Admin abre `/admin/usuarios` → aba "Convites" → "Convidar usuário".
+- Preenche e-mail + papel (`admin` ou `consultor`) + nome opcional.
+- Server function `criarConvite` (com `requireSupabaseAuth` + checagem `is_admin`):
+  - Valida e-mail, verifica que não existe usuário ativo com esse e-mail nem convite pendente ativo.
+  - Gera `token_unico` = 32 bytes aleatórios em base64url (via `crypto.randomBytes`).
+  - Armazena **apenas o hash SHA-256** do token na coluna `token_hash` (o token cru nunca fica no banco).
+  - Insere em `convites`: `status='pendente'`, `data_expiracao = now() + 7 days`, `convidado_por = auth.uid()`.
+  - Chama helper de e-mail transacional (Lovable Emails / Resend, conforme domínio já configurado) com link `https://<app>/aceitar-convite?token=<token_cru>`.
+  - Insere linha em `log_auditoria_admin` (acao='convite_enviado').
 
-**RLS**: `SELECT/INSERT/UPDATE/DELETE` gated por `public.projeto_no_escopo(projeto_id, auth.uid())` (função já existente). GRANTs para `authenticated` e `service_role`.
+**2. Aceite (destinatário, não autenticado)**
+- Rota pública `/aceitar-convite` (top-level, SSR desligado, sem gate).
+- Loader/server fn `validarConvite({ token })`:
+  - Recalcula `sha256(token)`, procura em `convites` por `token_hash = X` **e** `status='pendente'` **e** `data_expiracao > now()`.
+  - Se não encontra → tela "Convite inválido, expirado ou já utilizado".
+  - Se encontra → exibe formulário: mostra e-mail (readonly), papel, campos "nome completo" e "senha" (+ confirmação, com política HIBP já ativa).
+- Ao submeter, server fn `aceitarConvite({ token, nome, senha })`:
+  - Revalida convite (mesma checagem, dentro de uma transação lógica).
+  - `supabaseAdmin.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { nome } })`.
+  - O trigger existente `handle_new_user` cria a linha em `usuarios_internos`; a função de aceite então:
+    - Ajusta `status='ativo'`, `convidado_por = convite.convidado_por` em `usuarios_internos`.
+    - Remove a role padrão inserida pelo trigger e insere `papel_designado` do convite em `user_roles`.
+    - Marca `convites.status='aceito'`, grava `aceito_em` e `usuario_criado_id`.
+    - Grava `log_auditoria_admin` (acao='convite_aceito').
+  - Retorna sucesso → tela pede para o usuário fazer login em `/auth`.
 
-**Trigger de auditoria**: `AFTER INSERT` em `documentos` insere em `interacoes` (tipo `nota`) "Documento X — versão N enviada por <user>: <descricao>".
+**3. Reenvio**
+- Admin clica "Reenviar" num convite pendente.
+- Server fn `reenviarConvite`: gera **novo token**, atualiza `token_hash` + `data_expiracao = now()+7d`, mantém `status='pendente'`. Link antigo deixa de funcionar automaticamente (o hash mudou). Envia novo e-mail. Loga `convite_reenviado`.
 
-## Storage
+**4. Revogação**
+- Admin clica "Revogar". Server fn seta `status='revogado'`. Loga `convite_revogado`. Tentativas futuras de aceitar retornam "inválido".
 
-Bucket privado `documentos-projetos`. Caminho: `{projeto_id}/{grupo_documento_id}/v{numero_versao}-{nome_arquivo}`.
+**5. Expiração automática**
+- Job `pg_cron` diário: `UPDATE convites SET status='expirado' WHERE status='pendente' AND data_expiracao < now()`.
+- Complementar: a checagem `data_expiracao > now()` no `validarConvite` já bloqueia em tempo real mesmo antes do cron rodar.
 
-**Políticas em `storage.objects`** (bucket = `documentos-projetos`): SELECT/INSERT/UPDATE/DELETE só se `projeto_no_escopo((storage.foldername(name))[1]::uuid, auth.uid())`. Assim quem pode ver o projeto pode ler/gravar seus arquivos.
+**Garantias de segurança do fluxo**
+- Token só existe em texto claro no e-mail e na URL; o banco só guarda hash.
+- Admin nunca vê nem define senha alheia.
+- Reenvio invalida o link anterior (hash trocou).
+- Convite revogado/expirado nunca mais aceita, mesmo com o link salvo.
+- RLS na tabela `convites` impede leitura por não-admins; aceite público usa server fn com `supabaseAdmin` após validar o token.
 
-Downloads via **signed URL** (5 min) gerado por server function.
+---
 
-## Server functions (`src/lib/documentos.functions.ts`)
+### Plano de implementação
 
-Todas com `requireSupabaseAuth`:
+**A. Migração de banco**
+1. `usuarios_internos`: adicionar `status text` (`convidado|ativo|desativado`, default `ativo` para os já existentes), `ultimo_login timestamptz`, `convidado_por uuid REFERENCES usuarios_internos(id)`.
+2. `convites`: `id, email_convidado citext, papel_designado app_role, token_hash text UNIQUE, data_expiracao timestamptz, status text CHECK IN (…), convidado_por, aceito_em, usuario_criado_id, criado_em, updated_at`.
+3. `log_auditoria_admin`: `id, usuario_que_executou, acao text, usuario_afetado, detalhes_da_acao jsonb, data_hora`. Sem UPDATE/DELETE policies — append-only. Revogar UPDATE/DELETE de `authenticated` e `service_role` do jeito documentado (policies só de INSERT+SELECT; deletes/updates só via superuser).
+4. GRANTs corretos (SELECT/INSERT para authenticated conforme necessário; nenhum acesso a `anon`).
+5. RLS: só admin lê/escreve `convites` e `log_auditoria_admin`; `usuarios_internos` mantém regras atuais + admin pode alterar status/role.
+6. Trigger `handle_new_user`: ajustar para respeitar convite quando existir (não forçar admin no primeiro user se estiver aceitando convite; manter fallback atual).
+7. Função `pode_desativar_admin(_id)` que retorna false se seria o último admin ativo; usar em trigger `BEFORE UPDATE`/`BEFORE DELETE` em `user_roles` e em `usuarios_internos.status`.
+8. Trigger que atualiza `ultimo_login` (via server fn no sign-in, já que Supabase não expõe trigger de login — atualização feita no root `onAuthStateChange` chamando server fn `registrarLogin`).
+9. Cron diário para expirar convites (`pg_cron` + SQL puro — Opção 1 do knowledge, sem endpoint externo).
 
-- `listDocumentosByProjeto({ projeto_id })` — retorna array agrupado por `grupo_documento_id` com todas as versões ordenadas por `numero_versao desc`, junto com `enviado_por` (nome).
-- `registerDocumentoVersion({ projeto_id, grupo_documento_id?, tipo, nome_arquivo, storage_path, tamanho_arquivo, mime_type, descricao_da_versao })`:
-  - Se `grupo_documento_id` vazio → cria grupo novo (gera uuid, `numero_versao = 1`, `e_versao_atual = true`).
-  - Se existir → dentro de uma transação (RPC Postgres `registrar_nova_versao_documento`): busca `max(numero_versao)`, marca versões anteriores `e_versao_atual = false`, insere nova com `numero_versao = max+1` e `e_versao_atual = true`. Isso evita corrida cliente-servidor.
-  - Retorna a linha inserida.
-- `getDocumentoDownloadUrl({ documento_id })` — resolve `storage_path` (RLS valida escopo), gera signed URL 300s.
-- `deleteGrupoDocumento({ grupo_documento_id })` (só admin) — usado apenas para limpeza; **por padrão não expor no UI** (requisito é imutabilidade).
+**B. Server functions (`src/lib/admin.functions.ts`)**
+- `criarConvite`, `reenviarConvite`, `revogarConvite`, `listarConvites`.
+- `validarConvite` (pública, sem auth) e `aceitarConvite` (pública, usa `supabaseAdmin` só após validar hash).
+- `alterarPapel`, `setUsuarioStatus` (com bloqueio "último admin"), `listarLogAuditoria`.
+- `registrarLogin` (autenticada, seta `ultimo_login`).
+- Todas as ações admin gravam `log_auditoria_admin` no mesmo handler.
 
-O upload do binário acontece direto no browser com o client `supabase` (bucket privado, RLS aplica ao usuário logado). Depois o front chama `registerDocumentoVersion` com os metadados. Isso evita passar o arquivo pela server function.
+**C. E-mail transacional**
+- Verificar se domínio já está configurado (`email_domain--check_email_domain_status`). Se não, uso o scaffold de templates transacionais e sigo o setup autônomo. Template "Convite GestorFINEP" com link + validade.
 
-## UI — nova aba "Documentos" em `projetos.$id.tsx`
+**D. Rotas / UI**
+- `/aceitar-convite` (pública): valida token, formulário de nome + senha, tela de sucesso/erro.
+- `/_authenticated/admin/usuarios` (renomeia a atual `/usuarios`, gate por role admin no `beforeLoad` além do RLS): abas **Usuários**, **Convites pendentes**, **Log de auditoria**.
+  - Usuários: tabela com busca, filtro por papel/status, último login; clique abre drawer com editar papel, ativar/desativar, histórico daquele usuário.
+  - Convites: lista pendentes com reenviar/revogar; botão "Convidar usuário".
+  - Log: lista cronológica com filtro por usuário/ação.
+- Reaproveitar o dialog de reatribuição de carteira já existente ao desativar.
+- Menu lateral: item "Administração" só para admin (já existe padrão), aponta pra nova rota.
 
-Adicionar `<TabsTrigger value="documentos">` e um `<TabsContent>` renderizando `<DocumentosTab projetoId={id} />` (componente novo em `src/components/documentos-tab.tsx`).
+**E. Sessão encerrada ao desativar**
+- Server fn `setUsuarioStatus` quando desativa: chama `supabaseAdmin.auth.admin.signOut(userId, 'global')` para revogar refresh tokens.
+- No cliente, o root `onAuthStateChange` já trata `SIGNED_OUT` e redireciona para `/auth`; adicional: hook global que a cada N minutos (ou em foco) chama `getCurrentUser` — se retornar `status='desativado'`, força signOut local imediato.
 
-Layout do componente:
+**F. Métricas do dashboard**
+- Ajustar contagens de "usuários ativos" para filtrar `status='ativo'` (convidados não contam).
 
-- **4 seções colapsáveis por tipo**: Materiais, Contratos, Aditivos, Relatórios, Outros. Cada seção tem seu próprio dropzone "Arrastar arquivo aqui ou clicar para selecionar" que cria um **novo grupo** (documento novo) desse tipo.
-- **Lista de documentos do grupo** (cards): mostra `nome_arquivo`, badge "Versão atual v{n}" (cor `primary`), tamanho, quem enviou, data. Botão "Nova versão" abre dialog com dropzone + campo obrigatório "O que mudou nesta versão?".
-- **Ver histórico**: expandível abaixo do card — lista todas as versões (mais recente no topo), cada linha com `v{n}` (badge `outline` se antiga, `default` se atual), data, autor, descrição, botão de download. Nunca esconde a versão antiga.
-- **Indicador visual**: versão atual = badge verde/primary + ícone `Star`; anteriores = badge cinza + opacidade 0.8.
+**G. Critérios de aceite (checklist final)**
+- Token revogado/expirado → aceite retorna erro sem criar usuário.
+- Tentativa de remover role admin do último admin → erro 400 do trigger.
+- Toda ação admin aparece no log; UPDATE/DELETE no log falha por policy.
+- Desativação → sessão do alvo termina em ≤ 1 refresh de token / próxima chamada autenticada.
+- Acesso direto à URL `/admin/usuarios` sem role admin → redirect + RLS bloqueia queries mesmo se contornar UI.
 
+<<<<<<< HEAD
 Validação client-side de tipo de arquivo:
 
 - Extensões aceitas: `.pdf .doc .docx .xls .xlsx .png .jpg .jpeg .webp`
 - Tamanho máximo: 25 MB (mostrar toast se exceder)
 - Zod schema `documentoUploadSchema` para validar antes do upload
+=======
+---
+>>>>>>> 1b78db33cd458632241ee46c1aee77bd182e17de
 
-Drag-and-drop nativo (sem dependência nova): eventos `onDragOver / onDrop` em `div` com estado `isDragging`.
-
-## Fluxo de upload (client)
-
-```text
-1. usuário arrasta arquivo → valida tipo/tamanho
-2. (nova versão) pede descrição obrigatória em dialog; (grupo novo) pede tipo se ainda não selecionado
-3. gera storage_path = `${projetoId}/${grupoId ?? novoUuid}/v${proximoN}-${nomeSanitizado}`
-4. supabase.storage.from('documentos-projetos').upload(path, file)
-5. chama registerDocumentoVersion(...) — server insere row e devolve versão criada
-6. invalidateQueries(['documentos', projetoId])
-```
-
-Se a etapa 5 falhar, apagamos o objeto órfão via `supabase.storage.remove([path])` no `catch` para não deixar lixo no bucket.
-
-## Arquivos criados/alterados
-
-- **Migration**: enum + tabela + índices + RLS + policies + GRANT + trigger de auditoria + função RPC `registrar_nova_versao_documento`.
-- **Storage bucket**: `documentos-projetos` (privado) via `storage_create_bucket` + policies em `storage.objects` via migration.
-- **Novo**: `src/lib/documentos.functions.ts`
-- **Novo**: `src/components/documentos-tab.tsx` (com subcomponentes `DocumentGroup`, `VersionHistory`, `UploadDialog`, `Dropzone`)
-- **Edit**: `src/routes/_authenticated/projetos.$id.tsx` — adiciona a aba "Documentos".
-- **Edit**: `src/lib/labels.tsx` — helpers `tipoDocumentoLabel`, `formatFileSize`.
-
-## Critérios de aceite (mapeamento)
-
-- ✅ Nova versão nunca apaga a anterior → RPC insere linha nova, `UPDATE` só troca `e_versao_atual` do resto do grupo; nenhum `DELETE` nem overwrite de storage (paths são versionados).
-- ✅ Download de qualquer versão antiga → cada linha do histórico tem botão que chama `getDocumentoDownloadUrl` no `documento_id` daquela versão específica.
-- ✅ Versão vigente clara → badge "Versão atual v{n}" em verde no card do grupo; histórico marca a atual em destaque e as anteriores em cinza.
+**Confirma o fluxo de convite acima?** Em especial:
+1. **7 dias** de validade OK, ou prefere outro prazo?
+2. Papéis no convite continuam sendo só `admin`/`consultor` (os já existentes no enum), certo?
+3. E-mail transacional: uso **Lovable Emails** (recomendado, já integrado à plataforma) se o domínio de e-mail estiver configurado no workspace — ok?
