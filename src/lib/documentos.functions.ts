@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { ALLOWED_MIME_TYPES, MAX_DOCUMENT_SIZE } from "@/lib/validators";
 
 const BUCKET = "documentos-projetos";
 
@@ -43,8 +44,19 @@ export const registerDocumentoVersion = createServerFn({ method: "POST" })
         tipo: tipoDoc,
         nome_arquivo: z.string().min(1).max(255),
         storage_path: z.string().min(1),
-        tamanho_arquivo: z.number().int().nonnegative(),
-        mime_type: z.string().max(255).nullable().optional(),
+        tamanho_arquivo: z
+          .number()
+          .int()
+          .nonnegative()
+          .max(MAX_DOCUMENT_SIZE, `Arquivo não pode exceder 25 MB`),
+        mime_type: z
+          .string()
+          .refine(
+            (m) => ALLOWED_MIME_TYPES.includes(m),
+            "Tipo MIME não permitido. Aceito: PDF, DOCX, XLSX, PNG, JPEG, WEBP",
+          )
+          .nullable()
+          .optional(),
         descricao_da_versao: z.string().max(1000).optional().default(""),
       })
       .refine((v) => Boolean(v.projeto_id) !== Boolean(v.empresa_cliente_id), {

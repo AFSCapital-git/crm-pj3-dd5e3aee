@@ -1,10 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { validarCNPJ } from "@/lib/validators";
 
 const empresaSchema = z.object({
   razao_social: z.string().min(1),
-  cnpj: z.string().min(11),
+  cnpj: z
+    .string()
+    .regex(/^\d{14}$/, "CNPJ deve ter exatamente 14 dígitos")
+    .refine((c) => validarCNPJ(c), "CNPJ inválido (dígitos verificadores não conferem)"),
   porte: z.enum(["ME", "EPP", "Grande"]),
   setor_atuacao: z.string().nullable().optional(),
   contato_responsavel: z.string().nullable().optional(),
@@ -78,7 +82,11 @@ export const deleteEmpresa = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { id: string }) => d)
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.from("empresas_clientes").delete().eq("id", data.id);
+    // Soft delete: marcar como inativo em vez de apagar
+    const { error } = await context.supabase
+      .from("empresas_clientes")
+      .update({ status: "inativo" })
+      .eq("id", data.id);
     if (error) throw error;
     return { ok: true };
   });

@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Plus, Trash2, Mail } from "lucide-react";
-import { getProjeto } from "@/lib/projetos.functions";
+import { getProjeto, listInteracoesPaginado } from "@/lib/projetos.functions";
 import { upsertMarco, marcarEntregue, deleteMarco, createInteracao } from "@/lib/marcos.functions";
 import {
   UrgencyBadge,
@@ -65,9 +65,18 @@ function ProjetoDetail() {
   const marcar = useServerFn(marcarEntregue);
   const del = useServerFn(deleteMarco);
   const criarNota = useServerFn(createInteracao);
+  const listInteracoes = useServerFn(listInteracoesPaginado);
 
   const [openMarco, setOpenMarco] = useState(false);
   const [nota, setNota] = useState("");
+  const [interacaoCursor, setInteracaoCursor] = useState<string | null>(null);
+
+  const qInteracoes = useQuery({
+    queryKey: ["projeto-interacoes", id, interacaoCursor],
+    queryFn: () =>
+      listInteracoes({ data: { projeto_id: id, cursor: interacaoCursor, pageSize: 20 } }),
+    enabled: !!id,
+  });
 
   const mUpsertMarco = useMutation({
     mutationFn: (v: Record<string, unknown>) => upsert({ data: v }),
@@ -124,7 +133,7 @@ function ProjetoDetail() {
           <TabsTrigger value="marcos">Marcos ({marcos.length})</TabsTrigger>
           <TabsTrigger value="documentos">Documentos</TabsTrigger>
           <TabsTrigger value="emails">E-mails</TabsTrigger>
-          <TabsTrigger value="timeline">Linha do tempo ({interacoes.length})</TabsTrigger>
+          <TabsTrigger value="timeline">Linha do tempo</TabsTrigger>
           <TabsTrigger value="ia">Assistente IA</TabsTrigger>
         </TabsList>
 
@@ -232,12 +241,16 @@ function ProjetoDetail() {
                   value={nota}
                   onChange={(e) => setNota(e.target.value)}
                 />
-                <Button onClick={() => nota && mNota.mutate()} disabled={mNota.isPending || !nota}>
+                <Button
+                  onClick={() => nota && mNota.mutate()}
+                  disabled={mNota.isPending || !nota}
+                  className="shrink-0"
+                >
                   Adicionar
                 </Button>
               </div>
               <div className="space-y-3">
-                {interacoes.map((i: Record<string, unknown>) => (
+                {qInteracoes.data?.items?.map((i: Record<string, unknown>) => (
                   <div key={i.id as string} className="border-l-2 border-primary/40 pl-4 py-1">
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <Badge
@@ -253,10 +266,20 @@ function ProjetoDetail() {
                     <p className="text-sm mt-1">{i.descricao}</p>
                   </div>
                 ))}
-                {interacoes.length === 0 && (
+                {!qInteracoes.data?.items?.length && !qInteracoes.isLoading && (
                   <p className="text-sm text-muted-foreground">Sem interações ainda.</p>
                 )}
               </div>
+              {qInteracoes.data?.hasMore && (
+                <Button
+                  variant="outline"
+                  onClick={() => setInteracaoCursor(qInteracoes.data.nextCursor)}
+                  disabled={qInteracoes.isLoading}
+                  className="w-full"
+                >
+                  {qInteracoes.isLoading ? "Carregando..." : "Carregar mais"}
+                </Button>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

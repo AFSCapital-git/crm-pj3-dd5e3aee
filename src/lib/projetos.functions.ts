@@ -80,6 +80,12 @@ export const upsertProjeto = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     if (data.id) {
+      const { data: statusAntes } = await context.supabase
+        .from("projetos")
+        .select("status")
+        .eq("id", data.id)
+        .maybeSingle();
+
       const { data: row, error } = await context.supabase
         .from("projetos")
         .update(data.values)
@@ -87,6 +93,20 @@ export const upsertProjeto = createServerFn({ method: "POST" })
         .select()
         .single();
       if (error) throw error;
+
+      const mudouParaDecisao =
+        (data.values.status === "aprovado" || data.values.status === "reprovado") &&
+        statusAntes?.status !== data.values.status;
+
+      if (mudouParaDecisao) {
+        try {
+          const { notificarProjetoStatus } = await import("@/lib/notifications.server");
+          await notificarProjetoStatus(row);
+        } catch (err) {
+          console.error("[email] erro ao notificar status de projeto", err);
+        }
+      }
+
       return row;
     }
     const { data: row, error } = await context.supabase
@@ -105,4 +125,36 @@ export const deleteProjeto = createServerFn({ method: "POST" })
     const { error } = await context.supabase.from("projetos").delete().eq("id", data.id);
     if (error) throw error;
     return { ok: true };
+  });
+
+export const listInteracoesPaginado = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        projeto_id: z.string().uuid(),
+        cursor: z.string().nullable().optional(),
+        pageSize: z.number().int().min(5).max(100).default(20),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    let query = context.supabase
+      .from("interacoes")
+      .select("*, autor:usuario_id(id,nome)")
+      .eq("projeto_id", data.projeto_id)
+      .order("data_hora", { ascending: false });
+
+    if (data.cursor) {
+      query = query.lt("data_hora", data.cursor);
+    }
+
+    const { data: rows, error } = await query.limit(data.pageSize + 1);
+    if (error) throw error;
+
+    const hasMore = (rows ?? []).length > data.pageSize;
+    const items = (rows ?? []).slice(0, data.pageSize);
+    const nextCursor = items.length > 0 ? items[items.length - 1].data_hora : null;
+
+    return { items, nextCursor, hasMore };
   });
