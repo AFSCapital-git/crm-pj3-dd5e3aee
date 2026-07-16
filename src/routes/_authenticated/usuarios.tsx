@@ -371,7 +371,7 @@ function UsuariosTab() {
   const alterarPapelFn = useServerFn(alterarPapel);
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ["admin-usuarios"], queryFn: () => listFn() });
-  const users = (q.data ?? []) as UsuarioRow[];
+  const users = (q.data ?? []) as unknown as UsuarioRow[];
 
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState<string>("todos");

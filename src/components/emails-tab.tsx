@@ -118,7 +118,7 @@ export function EmailsTab({
             <p className="text-sm text-muted-foreground">Nenhum e-mail encaminhado ainda.</p>
           )}
           <div className="divide-y">
-            {q.data?.map((e: Record<string, unknown>) => (
+            {(q.data as any[] | undefined)?.map((e: any) => (
               <div key={e.id as string} className="py-3">
                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                   <Mail className="h-3.5 w-3.5" />

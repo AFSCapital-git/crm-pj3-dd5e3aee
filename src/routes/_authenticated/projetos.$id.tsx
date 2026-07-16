@@ -724,9 +724,9 @@ function TimelineSection({ projetoId }: { projetoId: string }) {
     setPagina(1);
   };
 
-  const items = q.data?.items ?? [];
-  const destacados = items.filter((i) => i.destacado);
-  const naoDestacados = items.filter((i) => !i.destacado);
+  const items = (q.data?.items ?? []) as any[];
+  const destacados = items.filter((i: any) => i.destacado);
+  const naoDestacados = items.filter((i: any) => !i.destacado);
   const todasInteracoes = [...destacados, ...naoDestacados];
 
   return (

@@ -38,7 +38,7 @@ function CronogramaPage() {
   const [urgencia, setUrgencia] = useState<string>("all");
 
   const filtered = useMemo(() => {
-    return marcos.filter((m: Record<string, unknown>) => {
+    return marcos.filter((m: any) => {
       if (consultor !== "all" && m.consultor_responsavel_id !== consultor) return false;
       if (urgencia === "abertos" && m.data_entrega_real) return false;
       if (urgencia !== "all" && urgencia !== "abertos" && m.urgencia !== urgencia) return false;
@@ -63,7 +63,7 @@ function CronogramaPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os consultores</SelectItem>
-              {(qU.data ?? []).map((u: Record<string, unknown>) => (
+              {(qU.data ?? []).map((u: any) => (
                 <SelectItem key={u.id as string} value={u.id as string}>
                   {u.nome as string}
                 </SelectItem>
@@ -103,7 +103,7 @@ function CronogramaPage() {
           ) : (
             <>
               <div className="divide-y">
-                {filtered.map((m: Record<string, unknown>) => (
+                {filtered.map((m: any) => (
                   <Link
                     key={m.id as string}
                     to="/projetos/$id"
