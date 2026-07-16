@@ -8,6 +8,7 @@ import { listUsuarios, reassignEmpresasConsultor } from "@/lib/dashboard.functio
 import {
   listConvites,
   criarConvite,
+  criarUsuarioDireto,
   reenviarConvite,
   revogarConvite,
   alterarPapel,
