@@ -21,28 +21,28 @@ export const listEmpresasPaginado = createServerFn({ method: "GET" })
     let query = context.supabase
       .from("empresas_clientes")
       .select(
-        "id,razao_social,cnpj,porte,status,consultor:consultor_responsavel_id(id,nome,email),criado_em",
+        "id,razao_social,cnpj,porte,status,consultor:consultor_responsavel_id(id,nome,email),created_at",
       );
 
     // Cursor: busca o próximo item após o cursor (se fornecido)
     if (cursor) {
       const { data: cursorRow } = await context.supabase
         .from("empresas_clientes")
-        .select("criado_em")
+        .select("created_at")
         .eq("id", cursor)
         .single();
 
       if (cursorRow) {
         // Usar created_at para ordenação, depois ID para tiebreak
         query = query.or(
-          `criado_em.lt.${new Date(cursorRow.criado_em).toISOString()},and(criado_em.eq.${new Date(cursorRow.criado_em).toISOString()},id.lt.${cursor})`,
+          `created_at.lt.${new Date(cursorRow.created_at).toISOString()},and(created_at.eq.${new Date(cursorRow.created_at).toISOString()},id.lt.${cursor})`,
         );
       }
     }
 
     // Buscar pageSize + 1 para saber se há mais
     const { data: rows, error } = await query
-      .order("criado_em", { ascending: false })
+      .order("created_at", { ascending: false })
       .order("id", { ascending: false })
       .limit(pageSize + 1);
 
@@ -71,28 +71,28 @@ export const listEditaisPaginado = createServerFn({ method: "GET" })
 
     let query = context.supabase
       .from("linhas_editais_finep")
-      .select("id,nome,categoria,orgao,prazo_submissao,ativo,criado_em");
+      .select("id,nome,categoria,orgao,prazo_submissao,ativo,created_at");
 
     if (cursor) {
       const { data: cursorRow } = await context.supabase
         .from("linhas_editais_finep")
-        .select("prazo_submissao,criado_em")
+        .select("prazo_submissao,created_at")
         .eq("id", cursor)
         .single();
 
       if (cursorRow) {
-        // Ordenar por data do prazo (null last), depois criado_em
+        // Ordenar por data do prazo (null last), depois created_at
         const prazo = cursorRow.prazo_submissao;
-        const created = new Date(cursorRow.criado_em).toISOString();
+        const created = new Date(cursorRow.created_at).toISOString();
 
         if (prazo) {
           query = query.or(
-            `prazo_submissao.gt.${prazo},and(prazo_submissao.eq.${prazo},criado_em.lt.${created})`,
+            `prazo_submissao.gt.${prazo},and(prazo_submissao.eq.${prazo},created_at.lt.${created})`,
           );
         } else {
           // Se cursor tem prazo = null, pega itens com prazo != null OU (prazo = null E criado < cursor)
           query = query.or(
-            `prazo_submissao.not.is.null,and(prazo_submissao.is.null,criado_em.lt.${created})`,
+            `prazo_submissao.not.is.null,and(prazo_submissao.is.null,created_at.lt.${created})`,
           );
         }
       }
@@ -100,7 +100,7 @@ export const listEditaisPaginado = createServerFn({ method: "GET" })
 
     const { data: rows, error } = await query
       .order("prazo_submissao", { ascending: true, nullsFirst: false })
-      .order("criado_em", { ascending: false })
+      .order("created_at", { ascending: false })
       .limit(pageSize + 1);
 
     if (error) throw error;
@@ -129,29 +129,29 @@ export const listMarcosPaginado = createServerFn({ method: "GET" })
     let query = context.supabase
       .from("marcos_com_urgencia")
       .select(
-        "id,projeto_id,tipo,data_prevista,status,urgencia,nome_projeto,empresa_razao_social,dias_para_vencer,criado_em",
+        "id,projeto_id,tipo,data_prevista,status,urgencia,nome_projeto,empresa_razao_social,dias_para_vencer,created_at",
       );
 
     if (cursor) {
       const { data: cursorRow } = await context.supabase
         .from("marcos_com_urgencia")
-        .select("data_prevista,criado_em")
+        .select("data_prevista,created_at")
         .eq("id", cursor)
         .single();
 
       if (cursorRow) {
         const dataPrevista = cursorRow.data_prevista;
-        const created = new Date(cursorRow.criado_em).toISOString();
+        const created = new Date(cursorRow.created_at).toISOString();
 
         query = query.or(
-          `data_prevista.gt.${dataPrevista},and(data_prevista.eq.${dataPrevista},criado_em.lt.${created})`,
+          `data_prevista.gt.${dataPrevista},and(data_prevista.eq.${dataPrevista},created_at.lt.${created})`,
         );
       }
     }
 
     const { data: rows, error } = await query
       .order("data_prevista", { ascending: true })
-      .order("criado_em", { ascending: false })
+      .order("created_at", { ascending: false })
       .limit(pageSize + 1);
 
     if (error) throw error;

@@ -124,11 +124,11 @@ export const upsertProjeto = createServerFn({ method: "POST" })
     }
     const { data: row, error } = await context.supabase
       .from("projetos")
-      .insert(data.values as Record<string, unknown>)
+      .insert(data.values as any)
       .select()
       .single();
     if (error) throw error;
-    return row as unknown;
+    return row as any;
   });
 
 export const deleteProjeto = createServerFn({ method: "POST" })
@@ -160,7 +160,7 @@ export const listInteracoesPaginado = createServerFn({ method: "GET" })
       .order("data_hora", { ascending: false });
 
     if (data.tipos?.length) {
-      query = query.in("tipo", data.tipos);
+      query = query.in("tipo", data.tipos as any);
     }
 
     if (data.cursor) {
@@ -183,6 +183,6 @@ export const toggleInteracaoDestaque = createServerFn({ method: "POST" })
     z.object({ id: z.string().uuid() }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    await context.supabase.rpc("toggle_interacao_destaque", { _id: data.id });
+    await context.supabase.rpc("toggle_interacao_destaque" as any, { _id: data.id });
     return { ok: true };
   });
