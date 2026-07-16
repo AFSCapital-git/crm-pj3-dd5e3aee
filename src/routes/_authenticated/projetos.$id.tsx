@@ -733,7 +733,7 @@ function TimelineSection({ projetoId }: { projetoId: string }) {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Linha do tempo</CardTitle>
-        <Select>
+        <Select value="filter" onValueChange={() => {}}>
           <SelectTrigger className="w-40">
             <SelectValue placeholder="Filtrar por tipo" />
           </SelectTrigger>
