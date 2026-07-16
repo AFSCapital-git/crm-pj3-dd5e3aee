@@ -407,6 +407,8 @@ function UsuariosTab() {
   const [reassignTo, setReassignTo] = useState("");
   const [editing, setEditing] = useState<UsuarioRow | null>(null);
   const [novoPapel, setNovoPapel] = useState<"admin" | "coordenador" | "projetista">("projetista");
+  const [coordenadorId, setCoordenadorId] = useState<string | null>(null);
+  const [veTodosProjetos, setVeTodosProjetos] = useState(false);
 
   const mStatus = useMutation({
     mutationFn: (v: { user_id: string; status: "ativo" | "desativado" }) =>
