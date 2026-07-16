@@ -161,7 +161,7 @@ export const listMarcosPaginado = createServerFn({ method: "GET" })
     if (error) throw error;
 
     const hasMore = (rows?.length ?? 0) > pageSize;
-    const items = (rows ?? []).slice(0, pageSize);
+    const items = ((rows ?? []) as any[]).slice(0, pageSize);
     const nextCursor = hasMore ? items[items.length - 1]?.id : null;
 
     return {
