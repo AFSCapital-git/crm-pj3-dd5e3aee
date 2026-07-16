@@ -154,7 +154,6 @@ export const exportProjetosCsv = createServerFn({ method: "GET" })
 export const listUsuarios = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-<<<<<<< HEAD
     // Validar que usuário é admin antes de retornar lista
     const { data: userRole } = await context.supabase
       .from("user_roles")
@@ -169,63 +168,14 @@ export const listUsuarios = createServerFn({ method: "GET" })
     const [{ data: users }, { data: roles }] = await Promise.all([
       context.supabase.from("usuarios_internos").select("*").order("nome").limit(100),
       context.supabase.from("user_roles").select("user_id,role").limit(500),
-=======
-    const [{ data: users }, { data: roles }, { data: empresas }] = await Promise.all([
-      context.supabase.from("usuarios_internos").select("*").order("nome"),
-      context.supabase.from("user_roles").select("user_id,role"),
-      context.supabase.from("empresas_clientes").select("id,consultor_responsavel_id"),
->>>>>>> 1b78db33cd458632241ee46c1aee77bd182e17de
     ]);
     const byUser: Record<string, string[]> = {};
     for (const r of roles ?? []) {
       byUser[r.user_id] ??= [];
       byUser[r.user_id].push(r.role);
     }
-    const empresasByConsultor: Record<string, number> = {};
-    for (const e of empresas ?? []) {
-      if (!e.consultor_responsavel_id) continue;
-      empresasByConsultor[e.consultor_responsavel_id] =
-        (empresasByConsultor[e.consultor_responsavel_id] ?? 0) + 1;
-    }
     return (users ?? []).map((u) => ({
       ...u,
       roles: byUser[u.id] ?? [],
-      empresas_count: empresasByConsultor[u.id] ?? 0,
     }));
-  });
-
-import { z } from "zod";
-
-export const setUsuarioAtivo = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
-    z.object({ id: z.string().uuid(), ativo: z.boolean() }).parse(d),
-  )
-  .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
-      .from("usuarios_internos")
-      .update({ ativo: data.ativo })
-      .eq("id", data.id);
-    if (error) throw error;
-    return { ok: true };
-  });
-
-export const reassignEmpresasConsultor = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
-    z
-      .object({
-        from_user_id: z.string().uuid(),
-        to_user_id: z.string().uuid(),
-      })
-      .parse(d),
-  )
-  .handler(async ({ data, context }) => {
-    const { data: rows, error } = await context.supabase
-      .from("empresas_clientes")
-      .update({ consultor_responsavel_id: data.to_user_id })
-      .eq("consultor_responsavel_id", data.from_user_id)
-      .select("id");
-    if (error) throw error;
-    return { count: rows?.length ?? 0 };
   });
