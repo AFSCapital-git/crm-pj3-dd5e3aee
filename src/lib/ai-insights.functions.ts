@@ -90,7 +90,7 @@ async function montarResumoPortfolio(supabase: SupabaseClient) {
     )
     .in("status", ATIVOS as unknown as string[]);
 
-  const ids = (projetos ?? []).map((p: PortfolioBundle["projetos"][0]) => p.id);
+  const ids = ((projetos ?? []) as unknown as PortfolioBundle["projetos"]).map((p) => p.id);
   if (ids.length === 0) return { projetos: [], marcos: [], interacoes: [], emails: [] };
 
   const [{ data: marcos }, { data: interacoes }, { data: emails }] = await Promise.all([
@@ -113,10 +113,10 @@ async function montarResumoPortfolio(supabase: SupabaseClient) {
   ]);
 
   return {
-    projetos: projetos ?? [],
-    marcos: marcos ?? [],
-    interacoes: interacoes ?? [],
-    emails: emails ?? [],
+    projetos: (projetos ?? []) as unknown as PortfolioBundle["projetos"],
+    marcos: (marcos ?? []) as unknown as PortfolioBundle["marcos"],
+    interacoes: (interacoes ?? []) as unknown as PortfolioBundle["interacoes"],
+    emails: (emails ?? []) as unknown as PortfolioBundle["emails"],
   };
 }
 
@@ -281,7 +281,7 @@ ${resumo}`,
       .select()
       .single();
     if (error) throw error;
-    return row as unknown;
+    return row as Record<string, unknown>;
   });
 
 export const gerarRascunhoRelatorio = createServerFn({ method: "POST" })
@@ -363,7 +363,7 @@ ${(emails ?? []).map((e) => `- "${e.assunto}" de ${e.remetente_original} (${Stri
       .select()
       .single();
     if (error) throw error;
-    return row as unknown;
+    return row as Record<string, unknown>;
   });
 
 export const revisarInsight = createServerFn({ method: "POST" })
@@ -389,7 +389,7 @@ export const revisarInsight = createServerFn({ method: "POST" })
       .select()
       .single();
     if (error) throw error;
-    return row as unknown;
+    return row as Record<string, unknown>;
   });
 
 export const deleteInsight = createServerFn({ method: "POST" })
