@@ -60,23 +60,19 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "GestorFINEP — CRM de projetos" },
+      { title: "GestorFINEP — CRM de projetos FINEP" },
       {
         name: "description",
         content:
           "CRM interno para consultorias que gerenciam projetos de financiamento FINEP: prazos, marcos, compliance e carteira de clientes.",
       },
-      { property: "og:title", content: "GestorFINEP — CRM de projetos" },
+      { property: "og:title", content: "GestorFINEP — CRM de projetos FINEP" },
       {
         property: "og:description",
-        content: "CRM interno para consultorias que gerenciam projetos de financiamento FINEP: prazos, marcos, compliance e carteira de clientes.",
+        content: "Gestão de carteira, marcos e compliance de projetos FINEP.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "GestorFINEP — CRM de projetos" },
-      { name: "twitter:description", content: "CRM interno para consultorias que gerenciam projetos de financiamento FINEP: prazos, marcos, compliance e carteira de clientes." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/1ac6b993-a154-4c57-ada6-2b59e89b320d/id-preview-65e1d6ac--5241ce77-7ca3-40cd-8254-20356c55945d.lovable.app-1784231819904.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/1ac6b993-a154-4c57-ada6-2b59e89b320d/id-preview-65e1d6ac--5241ce77-7ca3-40cd-8254-20356c55945d.lovable.app-1784231819904.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
