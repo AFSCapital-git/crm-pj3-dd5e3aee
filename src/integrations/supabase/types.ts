@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           aceito_em: string | null
           convidado_por: string | null
+          coordenador_id: string | null
           criado_em: string
           data_expiracao: string
           email_convidado: string
@@ -28,10 +29,12 @@ export type Database = {
           token_hash: string
           updated_at: string
           usuario_criado_id: string | null
+          ve_todos_projetos: boolean
         }
         Insert: {
           aceito_em?: string | null
           convidado_por?: string | null
+          coordenador_id?: string | null
           criado_em?: string
           data_expiracao: string
           email_convidado: string
@@ -42,10 +45,12 @@ export type Database = {
           token_hash: string
           updated_at?: string
           usuario_criado_id?: string | null
+          ve_todos_projetos?: boolean
         }
         Update: {
           aceito_em?: string | null
           convidado_por?: string | null
+          coordenador_id?: string | null
           criado_em?: string
           data_expiracao?: string
           email_convidado?: string
@@ -56,11 +61,19 @@ export type Database = {
           token_hash?: string
           updated_at?: string
           usuario_criado_id?: string | null
+          ve_todos_projetos?: boolean
         }
         Relationships: [
           {
             foreignKeyName: "convites_convidado_por_fkey"
             columns: ["convidado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_internos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "convites_coordenador_id_fkey"
+            columns: ["coordenador_id"]
             isOneToOne: false
             referencedRelation: "usuarios_internos"
             referencedColumns: ["id"]
@@ -776,40 +789,56 @@ export type Database = {
         Row: {
           ativo: boolean
           convidado_por: string | null
+          coordenador_id: string | null
           created_at: string
           email: string
           id: string
           nome: string
+          senha_temporaria: boolean
           status: string
           ultimo_login: string | null
           updated_at: string
+          ve_todos_projetos: boolean
         }
         Insert: {
           ativo?: boolean
           convidado_por?: string | null
+          coordenador_id?: string | null
           created_at?: string
           email: string
           id: string
           nome: string
+          senha_temporaria?: boolean
           status?: string
           ultimo_login?: string | null
           updated_at?: string
+          ve_todos_projetos?: boolean
         }
         Update: {
           ativo?: boolean
           convidado_por?: string | null
+          coordenador_id?: string | null
           created_at?: string
           email?: string
           id?: string
           nome?: string
+          senha_temporaria?: boolean
           status?: string
           ultimo_login?: string | null
           updated_at?: string
+          ve_todos_projetos?: boolean
         }
         Relationships: [
           {
             foreignKeyName: "usuarios_internos_convidado_por_fkey"
             columns: ["convidado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_internos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "usuarios_internos_coordenador_id_fkey"
+            columns: ["coordenador_id"]
             isOneToOne: false
             referencedRelation: "usuarios_internos"
             referencedColumns: ["id"]
