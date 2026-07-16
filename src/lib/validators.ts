@@ -61,6 +61,23 @@ export function validarCPF(cpf: string): boolean {
   return true;
 }
 
+export function formatCpfCnpj(input: string): string {
+  const nums = input.replace(/\D/g, "");
+  if (nums.length <= 11) {
+    return nums
+      .replace(/^(\d{3})(\d)/, "$1.$2")
+      .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
+      .replace(/\.(\d{3})(\d)/, ".$1-$2")
+      .slice(0, 14);
+  }
+  return nums
+    .replace(/^(\d{2})(\d)/, "$1.$2")
+    .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+    .replace(/\.(\d{3})(\d)/, ".$1/$2")
+    .replace(/(\d{4})(\d)/, "$1-$2")
+    .slice(0, 18);
+}
+
 // MIME types permitidos para documentos
 export const ALLOWED_MIME_TYPES = [
   "application/pdf",

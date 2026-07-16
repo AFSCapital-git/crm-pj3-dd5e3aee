@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export const getDashboard = createServerFn({ method: "GET" })
@@ -178,4 +179,24 @@ export const listUsuarios = createServerFn({ method: "GET" })
       ...u,
       roles: byUser[u.id] ?? [],
     }));
+  });
+
+export const reassignEmpresasConsultor = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        from_user_id: z.string().uuid(),
+        to_user_id: z.string().uuid(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase
+      .from("empresas_clientes")
+      .update({ consultor_responsavel_id: data.to_user_id })
+      .eq("consultor_responsavel_id", data.from_user_id)
+      .select("id");
+    if (error) throw error;
+    return { count: rows?.length ?? 0 };
   });
