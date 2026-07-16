@@ -31,6 +31,19 @@ export const listEmpresas = createServerFn({ method: "GET" })
     return data;
   });
 
+export const listEmpresasInativas = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("empresas_clientes")
+      .select("*, consultor:consultor_responsavel_id(id,nome,email)")
+      .eq("status", "inativo")
+      .order("razao_social")
+      .limit(1000);
+    if (error) throw error;
+    return data;
+  });
+
 export const getEmpresa = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { id: string }) => d)
@@ -87,6 +100,18 @@ export const deleteEmpresa = createServerFn({ method: "POST" })
     const { error } = await context.supabase
       .from("empresas_clientes")
       .update({ status: "inativo" })
+      .eq("id", data.id);
+    if (error) throw error;
+    return { ok: true };
+  });
+
+export const reactivateEmpresa = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { id: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("empresas_clientes")
+      .update({ status: "ativo" })
       .eq("id", data.id);
     if (error) throw error;
     return { ok: true };

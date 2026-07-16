@@ -41,9 +41,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, FileText, Loader2, Search, X } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, Pencil, Trash2, FileText, Loader2, Search, X, RotateCcw } from "lucide-react";
 import { Link } from "@tanstack/react-router";
-import { listEmpresas, upsertEmpresa, deleteEmpresa } from "@/lib/empresas.functions";
+import { listEmpresas, listEmpresasInativas, upsertEmpresa, deleteEmpresa, reactivateEmpresa } from "@/lib/empresas.functions";
 import { listUsuarios } from "@/lib/dashboard.functions";
 import {
   formatCpfCnpj,
@@ -60,14 +61,17 @@ export const Route = createFileRoute("/_authenticated/empresas")({
 
 function EmpresasPage() {
   const list = useServerFn(listEmpresas);
+  const listInativas = useServerFn(listEmpresasInativas);
   const usuarios = useServerFn(listUsuarios);
   const q = useQuery({ queryKey: ["empresas"], queryFn: () => list() });
+  const qInativas = useQuery({ queryKey: ["empresas-inativas"], queryFn: () => listInativas() });
   const qUsers = useQuery({ queryKey: ["usuarios"], queryFn: () => usuarios() });
   const qc = useQueryClient();
 
   const [editing, setEditing] = useState<any | null>(null);
   const [open, setOpen] = useState(false);
   const [toDelete, setToDelete] = useState<any | null>(null);
+  const [tab, setTab] = useState<"ativas" | "inativas">("ativas");
 
   // Filtros
   const [search, setSearch] = useState("");
@@ -82,6 +86,7 @@ function EmpresasPage() {
 
   const upsert = useServerFn(upsertEmpresa);
   const del = useServerFn(deleteEmpresa);
+  const reactivate = useServerFn(reactivateEmpresa);
 
   const mUpsert = useMutation({
     mutationFn: (input: any) => upsert({ data: input }),
@@ -98,7 +103,17 @@ function EmpresasPage() {
     onSuccess: () => {
       toast.success("Empresa removida");
       qc.invalidateQueries({ queryKey: ["empresas"] });
+      qc.invalidateQueries({ queryKey: ["empresas-inativas"] });
       setToDelete(null);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+  const mReactivate = useMutation({
+    mutationFn: (id: string) => reactivate({ data: { id } }),
+    onSuccess: () => {
+      toast.success("Empresa reativada");
+      qc.invalidateQueries({ queryKey: ["empresas"] });
+      qc.invalidateQueries({ queryKey: ["empresas-inativas"] });
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -154,8 +169,16 @@ function EmpresasPage() {
 
       <Card>
         <CardHeader>
+          <Tabs value={tab} onValueChange={(v) => setTab(v as "ativas" | "inativas")}>
+            <TabsList>
+              <TabsTrigger value="ativas">Ativas</TabsTrigger>
+              <TabsTrigger value="inativas">Inativas</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </CardHeader>
+        <CardHeader>
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <CardTitle>Lista</CardTitle>
+            <CardTitle>{tab === "ativas" ? "Empresas ativas" : "Empresas inativas"}</CardTitle>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <div className="relative">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -197,70 +220,124 @@ function EmpresasPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {q.isLoading ? (
-            <p>Carregando…</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Razão social</TableHead>
-                  <TableHead>CNPJ</TableHead>
-                  <TableHead>Porte</TableHead>
-                  <TableHead>Consultor</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((e: any) => (
-                  <TableRow key={e.id}>
-                    <TableCell className="font-medium">{e.razao_social}</TableCell>
-                    <TableCell>{e.cnpj}</TableCell>
-                    <TableCell>{e.porte}</TableCell>
-                    <TableCell>{e.consultor?.nome ?? "—"}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{e.status}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right space-x-1">
-                      <Button asChild size="icon" variant="ghost" title="Abrir">
-                        <Link to="/empresas/$id" params={{ id: e.id }}>
-                          <FileText className="h-4 w-4" />
-                        </Link>
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => {
-                          setEditing(e);
-                          setOpen(true);
-                        }}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button size="icon" variant="ghost" onClick={() => setToDelete(e)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {filtered.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground py-10">
-                      {(q.data ?? []).length === 0 ? (
-                        "Nenhuma empresa cadastrada."
-                      ) : (
-                        <div className="flex flex-col items-center gap-2">
-                          <span>Nenhum cliente encontrado com esses filtros.</span>
-                          <Button variant="outline" size="sm" onClick={clearFilters}>
-                            <X className="mr-1 h-4 w-4" /> Limpar filtros
+          {tab === "ativas" ? (
+            <>
+              {q.isLoading ? (
+                <p>Carregando…</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Razão social</TableHead>
+                      <TableHead>CNPJ</TableHead>
+                      <TableHead>Porte</TableHead>
+                      <TableHead>Consultor</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead />
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.map((e: any) => (
+                      <TableRow key={e.id}>
+                        <TableCell className="font-medium">{e.razao_social}</TableCell>
+                        <TableCell>{e.cnpj}</TableCell>
+                        <TableCell>{e.porte}</TableCell>
+                        <TableCell>{e.consultor?.nome ?? "—"}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{e.status}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right space-x-1">
+                          <Button asChild size="icon" variant="ghost" title="Abrir">
+                            <Link to="/empresas/$id" params={{ id: e.id }}>
+                              <FileText className="h-4 w-4" />
+                            </Link>
                           </Button>
-                        </div>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => {
+                              setEditing(e);
+                              setOpen(true);
+                            }}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button size="icon" variant="ghost" onClick={() => setToDelete(e)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {filtered.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center text-muted-foreground py-10">
+                          {(q.data ?? []).length === 0 ? (
+                            "Nenhuma empresa cadastrada."
+                          ) : (
+                            <div className="flex flex-col items-center gap-2">
+                              <span>Nenhum cliente encontrado com esses filtros.</span>
+                              <Button variant="outline" size="sm" onClick={clearFilters}>
+                                <X className="mr-1 h-4 w-4" /> Limpar filtros
+                              </Button>
+                            </div>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              )}
+            </>
+          ) : (
+            <>
+              {qInativas.isLoading ? (
+                <p>Carregando…</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Razão social</TableHead>
+                      <TableHead>CNPJ</TableHead>
+                      <TableHead>Porte</TableHead>
+                      <TableHead>Consultor</TableHead>
+                      <TableHead />
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(qInativas.data ?? []).map((e: any) => (
+                      <TableRow key={e.id}>
+                        <TableCell className="font-medium">{e.razao_social}</TableCell>
+                        <TableCell>{e.cnpj}</TableCell>
+                        <TableCell>{e.porte}</TableCell>
+                        <TableCell>{e.consultor?.nome ?? "—"}</TableCell>
+                        <TableCell className="text-right space-x-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            title="Reativar"
+                            disabled={mReactivate.isPending}
+                            onClick={() => mReactivate.mutate(e.id)}
+                          >
+                            {mReactivate.isPending ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <RotateCcw className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {(qInativas.data ?? []).length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center text-muted-foreground py-10">
+                          Nenhuma empresa inativa.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
