@@ -16,6 +16,13 @@ const empresaSchema = z.object({
   telefone: z.string().nullable().optional(),
   consultor_responsavel_id: z.string().uuid().nullable().optional(),
   status: z.enum(["lead", "ativo", "inativo"]).default("lead"),
+  cep: z.string().nullable().optional(),
+  rua: z.string().nullable().optional(),
+  numero: z.string().nullable().optional(),
+  complemento: z.string().nullable().optional(),
+  bairro: z.string().nullable().optional(),
+  cidade: z.string().nullable().optional(),
+  estado: z.string().max(2).nullable().optional(),
 });
 
 export const listEmpresas = createServerFn({ method: "GET" })

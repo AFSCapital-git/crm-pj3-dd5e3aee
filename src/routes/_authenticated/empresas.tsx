@@ -389,7 +389,15 @@ function EmpresaForm({ initial, usuarios, onSubmit, loading }: any) {
     telefone: initial?.telefone ? formatTelefone(initial.telefone) : "",
     consultor_responsavel_id: initial?.consultor_responsavel_id ?? null,
     status: initial?.status ?? "lead",
+    cep: initial?.cep ?? "",
+    rua: initial?.rua ?? "",
+    numero: initial?.numero ?? "",
+    complemento: initial?.complemento ?? "",
+    bairro: initial?.bairro ?? "",
+    cidade: initial?.cidade ?? "",
+    estado: initial?.estado ?? "",
   });
+  const [cepLoading, setCepLoading] = useState(false);
   const [errors, setErrors] = useState<Errors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
@@ -436,6 +444,7 @@ function EmpresaForm({ initial, usuarios, onSubmit, loading }: any) {
       cnpj: onlyDigits(values.cnpj),
       telefone: values.telefone ? onlyDigits(values.telefone) : null,
       email: values.email || null,
+      cep: values.cep ? onlyDigits(values.cep) : null,
     });
   };
 
@@ -443,6 +452,34 @@ function EmpresaForm({ initial, usuarios, onSubmit, loading }: any) {
     "aria-invalid": !!errors[name] || undefined,
     className: errors[name] ? "border-destructive focus-visible:ring-destructive" : "",
   });
+
+  const buscarCEP = async (cep: string) => {
+    const digits = onlyDigits(cep);
+    if (digits.length !== 8) return;
+
+    setCepLoading(true);
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
+      const data = await res.json();
+
+      if (data.erro) {
+        toast.error("CEP não encontrado");
+        return;
+      }
+
+      setValues((prev) => ({
+        ...prev,
+        rua: data.logradouro || "",
+        bairro: data.bairro || "",
+        cidade: data.localidade || "",
+        estado: data.uf || "",
+      }));
+    } catch (err) {
+      toast.error("Erro ao buscar CEP");
+    } finally {
+      setCepLoading(false);
+    }
+  };
 
   return (
     <form onSubmit={submit} className="space-y-3">
@@ -522,6 +559,84 @@ function EmpresaForm({ initial, usuarios, onSubmit, loading }: any) {
         />
         {errors.email && <p className="mt-1 text-xs text-destructive">{errors.email}</p>}
       </div>
+
+      <div className="border-t pt-3">
+        <h3 className="font-semibold text-sm mb-3">Endereço</h3>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label>CEP</Label>
+          <Input
+            value={values.cep ?? ""}
+            onChange={(e) => setValues({ ...values, cep: e.target.value })}
+            onBlur={() => buscarCEP(values.cep ?? "")}
+            placeholder="00000-000"
+            disabled={cepLoading}
+          />
+        </div>
+        <div />
+      </div>
+
+      <div className="grid grid-cols-3 gap-3">
+        <div className="col-span-2">
+          <Label>Rua</Label>
+          <Input
+            value={values.rua ?? ""}
+            onChange={(e) => setValues({ ...values, rua: e.target.value })}
+            placeholder="Nome da rua"
+          />
+        </div>
+        <div>
+          <Label>Número</Label>
+          <Input
+            value={values.numero ?? ""}
+            onChange={(e) => setValues({ ...values, numero: e.target.value })}
+            placeholder="Nº"
+          />
+        </div>
+      </div>
+
+      <div>
+        <Label>Complemento</Label>
+        <Input
+          value={values.complemento ?? ""}
+          onChange={(e) => setValues({ ...values, complemento: e.target.value })}
+          placeholder="Apto, sala, etc (opcional)"
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label>Bairro</Label>
+          <Input
+            value={values.bairro ?? ""}
+            onChange={(e) => setValues({ ...values, bairro: e.target.value })}
+            placeholder="Bairro"
+          />
+        </div>
+        <div>
+          <Label>Cidade</Label>
+          <Input
+            value={values.cidade ?? ""}
+            onChange={(e) => setValues({ ...values, cidade: e.target.value })}
+            placeholder="Cidade"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-3">
+        <div>
+          <Label>Estado (UF)</Label>
+          <Input
+            value={values.estado ?? ""}
+            onChange={(e) => setValues({ ...values, estado: e.target.value.toUpperCase().slice(0, 2) })}
+            placeholder="SP"
+            maxLength={2}
+          />
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label>Consultor responsável</Label>
