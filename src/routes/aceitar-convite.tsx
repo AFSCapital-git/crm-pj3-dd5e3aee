@@ -13,7 +13,7 @@ type Search = { token?: string };
 
 export const Route = createFileRoute("/aceitar-convite")({
   ssr: false,
-  validateSearch: (s: Record<string, unknown>): Search => ({
+  validateSearch: (s: any): Search => ({
     token: typeof s.token === "string" ? s.token : undefined,
   }),
   component: AcceptInvitePage,

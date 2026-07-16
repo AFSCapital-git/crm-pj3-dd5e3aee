@@ -22,7 +22,7 @@ function EmpresaDetailPage() {
   });
 
   if (q.isLoading) return <p className="text-sm text-muted-foreground">Carregando…</p>;
-  const e: Record<string, unknown> = q.data as Record<string, unknown>;
+  const e: any = q.data as any;
   if (!e) return <p className="text-sm text-muted-foreground">Empresa não encontrada.</p>;
 
   return (

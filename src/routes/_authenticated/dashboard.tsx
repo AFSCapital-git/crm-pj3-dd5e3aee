@@ -107,7 +107,7 @@ function Dashboard() {
             <p className="text-sm text-muted-foreground">Nenhum marco requer atenção imediata.</p>
           ) : (
             <div className="divide-y">
-              {d.marcos.map((m: Record<string, unknown>) => (
+              {d.marcos.map((m: any) => (
                 <Link
                   key={m.id as string}
                   to="/projetos/$id"
