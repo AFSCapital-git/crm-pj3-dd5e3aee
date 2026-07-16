@@ -680,16 +680,14 @@ function TimelineSection({ projetoId }: { projetoId: string }) {
   const fnToggleDestaque = useServerFn(toggleInteracaoDestaque);
   const qc = useQueryClient();
 
-  const [filtroTipos, setFiltroTipos] = useState<string[]>([]);
   const [pagina, setPagina] = useState(1);
 
   const q = useQuery({
-    queryKey: ["projeto-timeline", projetoId, filtroTipos, pagina],
+    queryKey: ["projeto-timeline", projetoId, pagina],
     queryFn: () =>
       fn({
         data: {
           projeto_id: projetoId,
-          tipos: filtroTipos.length > 0 ? filtroTipos : undefined,
           cursor: pagina === 1 ? null : new Date(Date.now() - pagina * 20 * 60000).toISOString(),
           pageSize: 20,
         },
@@ -699,30 +697,9 @@ function TimelineSection({ projetoId }: { projetoId: string }) {
   const mToggleDestaque = useMutation({
     mutationFn: (id: string) => fnToggleDestaque({ data: { id } }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["projeto-timeline", projetoId, filtroTipos, pagina] });
+      qc.invalidateQueries({ queryKey: ["projeto-timeline", projetoId, pagina] });
     },
   });
-
-  const tiposDisponiveis = [
-    "reuniao",
-    "email",
-    "ligacao",
-    "alteracao_cronograma",
-    "aditivo_contratual",
-    "nota",
-    "documento",
-    "email_encaminhado",
-    "tarefa",
-  ];
-
-  const handleToggleTipo = (tipo: string) => {
-    if (filtroTipos.includes(tipo)) {
-      setFiltroTipos(filtroTipos.filter((t) => t !== tipo));
-    } else {
-      setFiltroTipos([...filtroTipos, tipo]);
-    }
-    setPagina(1);
-  };
 
   const items = (q.data?.items ?? []) as any[];
   const destacados = items.filter((i: any) => i.destacado);
@@ -731,23 +708,8 @@ function TimelineSection({ projetoId }: { projetoId: string }) {
 
   return (
     <Card>
-      <CardHeader className="flex flex-col gap-3">
-        <div className="flex flex-row items-center justify-between">
-          <CardTitle>Linha do tempo</CardTitle>
-        </div>
-        <div className="flex flex-wrap gap-3">
-          {tiposDisponiveis.map((tipo) => (
-            <label key={tipo} className="flex items-center gap-2 cursor-pointer text-sm">
-              <input
-                type="checkbox"
-                checked={filtroTipos.includes(tipo)}
-                onChange={() => handleToggleTipo(tipo)}
-                className="rounded"
-              />
-              <span>{tipoInteracaoLabel(tipo)}</span>
-            </label>
-          ))}
-        </div>
+      <CardHeader>
+        <CardTitle>Linha do tempo</CardTitle>
       </CardHeader>
       <CardContent>
         {q.isLoading ? (
