@@ -14,12 +14,15 @@ export const Route = createFileRoute("/_authenticated")({
     if (error || !data.user) throw redirect({ to: "/auth" });
     const { data: perfil } = await supabase
       .from("usuarios_internos")
-      .select("status")
+      .select("status, senha_temporaria")
       .eq("id", data.user.id)
       .maybeSingle();
     if (perfil?.status === "desativado") {
       await supabase.auth.signOut();
       throw redirect({ to: "/auth" });
+    }
+    if (perfil?.senha_temporaria === true) {
+      throw redirect({ to: "/trocar-senha-obrigatoria" });
     }
     return { user: data.user };
   },

@@ -95,16 +95,28 @@ export const Route = createFileRoute("/_authenticated/usuarios")({
 // ---------- helpers ----------
 
 function RoleBadge({ role }: { role: string }) {
-  if (role === "admin") {
-    return (
-      <Badge className="gap-1 border-transparent bg-primary text-primary-foreground">
-        <Shield className="h-3 w-3" /> Admin
-      </Badge>
-    );
-  }
+  const roleMap: Record<string, { label: string; icon: React.ReactNode; className: string }> = {
+    admin: {
+      label: "Admin",
+      icon: <Shield className="h-3 w-3" />,
+      className: "bg-primary text-primary-foreground border-transparent",
+    },
+    coordenador: {
+      label: "Coordenador",
+      icon: <UserCog className="h-3 w-3" />,
+      className: "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/40",
+    },
+    projetista: {
+      label: "Projetista",
+      icon: <UserCog className="h-3 w-3" />,
+      className: "bg-secondary text-secondary-foreground border-secondary",
+    },
+  };
+
+  const config = roleMap[role] || roleMap.projetista;
   return (
-    <Badge variant="secondary" className="gap-1">
-      <UserCog className="h-3 w-3" /> Consultor
+    <Badge variant="outline" className={`gap-1 ${config.className}`}>
+      {config.icon} {config.label}
     </Badge>
   );
 }
@@ -394,7 +406,7 @@ function UsuariosTab() {
   const [reassigning, setReassigning] = useState<UsuarioRow | null>(null);
   const [reassignTo, setReassignTo] = useState("");
   const [editing, setEditing] = useState<UsuarioRow | null>(null);
-  const [novoPapel, setNovoPapel] = useState<"admin" | "consultor">("consultor");
+  const [novoPapel, setNovoPapel] = useState<"admin" | "coordenador" | "projetista">("projetista");
 
   const mStatus = useMutation({
     mutationFn: (v: { user_id: string; status: "ativo" | "desativado" }) =>
@@ -419,13 +431,19 @@ function UsuariosTab() {
   });
 
   const mPapel = useMutation({
-    mutationFn: (v: { user_id: string; papel: "admin" | "consultor" }) =>
-      alterarPapelFn({ data: v }),
+    mutationFn: (v: {
+      user_id: string;
+      papel: "admin" | "coordenador" | "projetista";
+      coordenador_id?: string | null;
+      ve_todos_projetos?: boolean;
+    }) => alterarPapelFn({ data: v }),
     onSuccess: () => {
       toast.success("Papel atualizado");
       qc.invalidateQueries({ queryKey: ["admin-usuarios"] });
       qc.invalidateQueries({ queryKey: ["admin-log"] });
       setEditing(null);
+      setCoordenadorId(null);
+      setVeTodosProjetos(false);
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -476,7 +494,8 @@ function UsuariosTab() {
                 <SelectContent>
                   <SelectItem value="todos">Todos</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="consultor">Consultor</SelectItem>
+                  <SelectItem value="coordenador">Coordenador</SelectItem>
+                  <SelectItem value="projetista">Projetista</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -550,7 +569,15 @@ function UsuariosTab() {
                               variant="outline"
                               onClick={() => {
                                 setEditing(u);
-                                setNovoPapel(u.roles.includes("admin") ? "admin" : "consultor");
+                                if (u.roles.includes("admin")) {
+                                  setNovoPapel("admin");
+                                } else if (u.roles.includes("coordenador")) {
+                                  setNovoPapel("coordenador");
+                                  setVeTodosProjetos(u.ve_todos_projetos || false);
+                                } else {
+                                  setNovoPapel("projetista");
+                                  setCoordenadorId(u.coordenador_id || null);
+                                }
                               }}
                             >
                               Editar
@@ -607,7 +634,15 @@ function UsuariosTab() {
                         variant="outline"
                         onClick={() => {
                           setEditing(u);
-                          setNovoPapel(u.roles.includes("admin") ? "admin" : "consultor");
+                          if (u.roles.includes("admin")) {
+                            setNovoPapel("admin");
+                          } else if (u.roles.includes("coordenador")) {
+                            setNovoPapel("coordenador");
+                            setVeTodosProjetos(u.ve_todos_projetos || false);
+                          } else {
+                            setNovoPapel("projetista");
+                            setCoordenadorId(u.coordenador_id || null);
+                          }
                         }}
                       >
                         Editar papel
@@ -742,17 +777,56 @@ function UsuariosTab() {
               administrador ativo.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2">
-            <Label>Papel</Label>
-            <Select value={novoPapel} onValueChange={(v: any) => setNovoPapel(v)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="consultor">Consultor</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="space-y-3">
+            <div>
+              <Label>Papel</Label>
+              <Select value={novoPapel} onValueChange={(v: any) => setNovoPapel(v)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="coordenador">Coordenador</SelectItem>
+                  <SelectItem value="projetista">Projetista</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {novoPapel === "projetista" && (
+              <div>
+                <Label>Coordenador responsável</Label>
+                <Select
+                  value={coordenadorId || ""}
+                  onValueChange={(v) => setCoordenadorId(v || null)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um coordenador" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {users
+                      .filter((u) => u.roles.includes("coordenador") && u.status === "ativo")
+                      .map((u) => (
+                        <SelectItem key={u.id} value={u.id}>
+                          {u.nome}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {novoPapel === "coordenador" && (
+              <div className="flex items-center gap-3">
+                <Switch
+                  id="ve-todos"
+                  checked={veTodosProjetos}
+                  onCheckedChange={setVeTodosProjetos}
+                />
+                <Label htmlFor="ve-todos" className="font-normal cursor-pointer">
+                  Este coordenador vê todos os projetos
+                </Label>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setEditing(null)}>
@@ -761,7 +835,14 @@ function UsuariosTab() {
             <Button
               disabled={mPapel.isPending}
               onClick={() => {
-                if (editing) mPapel.mutate({ user_id: editing.id, papel: novoPapel });
+                if (editing) {
+                  mPapel.mutate({
+                    user_id: editing.id,
+                    papel: novoPapel,
+                    coordenador_id: novoPapel === "projetista" ? coordenadorId : undefined,
+                    ve_todos_projetos: novoPapel === "coordenador" ? veTodosProjetos : undefined,
+                  });
+                }
               }}
             >
               {mPapel.isPending ? "Salvando…" : "Salvar"}
@@ -778,16 +859,26 @@ function UsuariosTab() {
 function ConvitesTab() {
   const listFn = useServerFn(listConvites);
   const criarFn = useServerFn(criarConvite);
+  const criarDiretoFn = useServerFn(criarUsuarioDireto);
   const reenviarFn = useServerFn(reenviarConvite);
   const revogarFn = useServerFn(revogarConvite);
   const qc = useQueryClient();
+  const listUsuariosFn = useServerFn(listUsuarios);
+  const qUsuarios = useQuery({ queryKey: ["admin-usuarios"], queryFn: () => listUsuariosFn() });
+  const users = (qUsuarios.data ?? []) as UsuarioRow[];
   const q = useQuery({ queryKey: ["admin-convites"], queryFn: () => listFn() });
   const convites = (q.data ?? []) as any[];
 
   const [openNovo, setOpenNovo] = useState(false);
+  const [openCadastroDireto, setOpenCadastroDireto] = useState(false);
   const [email, setEmail] = useState("");
-  const [papel, setPapel] = useState<"admin" | "consultor">("consultor");
+  const [papel, setPapel] = useState<"admin" | "coordenador" | "projetista">("projetista");
   const [nome, setNome] = useState("");
+  const [coordenadorIdConvite, setCoordenadorIdConvite] = useState<string | null>(null);
+  const [veTodosProjetosConvite, setVeTodosProjetosConvite] = useState(false);
+  const [senhaTemporaria, setSenhaTemporaria] = useState<{ senha: string; email: string } | null>(
+    null
+  );
   const [linkGerado, setLinkGerado] = useState<{ link: string; email: string } | null>(null);
   const [confirmRevogar, setConfirmRevogar] = useState<any | null>(null);
 
@@ -797,14 +888,51 @@ function ConvitesTab() {
   }
 
   const mCriar = useMutation({
-    mutationFn: () => criarFn({ data: { email, papel, nome: nome || undefined } }),
+    mutationFn: () =>
+      criarFn({
+        data: {
+          email,
+          papel,
+          nome: nome || undefined,
+          coordenador_id: papel === "projetista" ? coordenadorIdConvite : undefined,
+          ve_todos_projetos: papel === "coordenador" ? veTodosProjetosConvite : undefined,
+        },
+      }),
     onSuccess: (r: any) => {
       const link = buildLink(r.token);
       setLinkGerado({ link, email: r.convite.email_convidado });
       setEmail("");
       setNome("");
-      setPapel("consultor");
+      setPapel("projetista");
+      setCoordenadorIdConvite(null);
+      setVeTodosProjetosConvite(false);
       setOpenNovo(false);
+      qc.invalidateQueries({ queryKey: ["admin-convites"] });
+      qc.invalidateQueries({ queryKey: ["admin-log"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const mCriarDireto = useMutation({
+    mutationFn: () =>
+      criarDiretoFn({
+        data: {
+          email,
+          papel,
+          nome,
+          coordenador_id: papel === "projetista" ? coordenadorIdConvite : undefined,
+          ve_todos_projetos: papel === "coordenador" ? veTodosProjetosConvite : undefined,
+        },
+      }),
+    onSuccess: (r: any) => {
+      setSenhaTemporaria({ senha: r.senhaTemporaria, email: r.email });
+      setEmail("");
+      setNome("");
+      setPapel("projetista");
+      setCoordenadorIdConvite(null);
+      setVeTodosProjetosConvite(false);
+      setOpenCadastroDireto(false);
+      qc.invalidateQueries({ queryKey: ["admin-usuarios"] });
       qc.invalidateQueries({ queryKey: ["admin-convites"] });
       qc.invalidateQueries({ queryKey: ["admin-log"] });
     },
@@ -840,13 +968,22 @@ function ConvitesTab() {
     toast.success("Link copiado");
   }
 
+  async function copiarSenha() {
+    if (!senhaTemporaria) return;
+    await navigator.clipboard.writeText(senhaTemporaria.senha);
+    toast.success("Senha copiada");
+  }
+
   const pendentes = convites.filter((c) => c.status === "pendente");
   const historico = convites.filter((c) => c.status !== "pendente");
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <Button onClick={() => setOpenNovo(true)} className="gap-1 w-full sm:w-auto">
+      <div className="flex flex-col sm:flex-row gap-2 justify-end">
+        <Button onClick={() => setOpenCadastroDireto(true)} variant="outline" className="gap-1">
+          <Plus className="h-4 w-4" /> Cadastrar usuário
+        </Button>
+        <Button onClick={() => setOpenNovo(true)} className="gap-1">
           <Plus className="h-4 w-4" /> Convidar usuário
         </Button>
       </div>
@@ -1052,11 +1189,48 @@ function ConvitesTab() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="consultor">Consultor</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="coordenador">Coordenador</SelectItem>
+                  <SelectItem value="projetista">Projetista</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+
+            {papel === "projetista" && (
+              <div>
+                <Label>Coordenador responsável</Label>
+                <Select
+                  value={coordenadorIdConvite || ""}
+                  onValueChange={(v) => setCoordenadorIdConvite(v || null)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um coordenador" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {users
+                      .filter((u) => u.roles.includes("coordenador") && u.status === "ativo")
+                      .map((u) => (
+                        <SelectItem key={u.id} value={u.id}>
+                          {u.nome}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {papel === "coordenador" && (
+              <div className="flex items-center gap-3">
+                <Switch
+                  id="ve-todos-convite"
+                  checked={veTodosProjetosConvite}
+                  onCheckedChange={setVeTodosProjetosConvite}
+                />
+                <Label htmlFor="ve-todos-convite" className="font-normal cursor-pointer">
+                  Este coordenador vê todos os projetos
+                </Label>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setOpenNovo(false)}>
@@ -1066,6 +1240,124 @@ function ConvitesTab() {
               <Send className="h-4 w-4 mr-1" />
               {mCriar.isPending ? "Gerando…" : "Gerar convite"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cadastro direto */}
+      <Dialog open={openCadastroDireto} onOpenChange={setOpenCadastroDireto}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cadastrar novo usuário</DialogTitle>
+            <DialogDescription>
+              O usuário será criado imediatamente com uma senha temporária que deve ser trocada no
+              primeiro login.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Nome *</Label>
+              <Input value={nome} onChange={(e) => setNome(e.target.value)} required />
+            </div>
+            <div>
+              <Label>E-mail *</Label>
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <Label>Papel</Label>
+              <Select value={papel} onValueChange={(v: any) => setPapel(v)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="coordenador">Coordenador</SelectItem>
+                  <SelectItem value="projetista">Projetista</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {papel === "projetista" && (
+              <div>
+                <Label>Coordenador responsável</Label>
+                <Select
+                  value={coordenadorIdConvite || ""}
+                  onValueChange={(v) => setCoordenadorIdConvite(v || null)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um coordenador" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {users
+                      .filter((u) => u.roles.includes("coordenador") && u.status === "ativo")
+                      .map((u) => (
+                        <SelectItem key={u.id} value={u.id}>
+                          {u.nome}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {papel === "coordenador" && (
+              <div className="flex items-center gap-3">
+                <Switch
+                  id="ve-todos-cadastro"
+                  checked={veTodosProjetosConvite}
+                  onCheckedChange={setVeTodosProjetosConvite}
+                />
+                <Label htmlFor="ve-todos-cadastro" className="font-normal cursor-pointer">
+                  Este coordenador vê todos os projetos
+                </Label>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setOpenCadastroDireto(false)}>
+              Cancelar
+            </Button>
+            <Button disabled={!nome || !email || mCriarDireto.isPending} onClick={() => mCriarDireto.mutate()}>
+              {mCriarDireto.isPending ? "Criando…" : "Criar usuário"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Senha temporária */}
+      <Dialog open={!!senhaTemporaria} onOpenChange={(o) => !o && setSenhaTemporaria(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Usuário criado com sucesso</DialogTitle>
+            <DialogDescription>
+              Anote ou copie a senha temporária abaixo. O usuário deve trocá-la no primeiro login.
+              Esta senha <strong>não aparecerá novamente</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs text-muted-foreground">E-mail</Label>
+              <div className="rounded-md border bg-muted/40 p-3 text-sm font-medium break-all">
+                {senhaTemporaria?.email}
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Senha temporária</Label>
+              <div className="rounded-md border bg-muted/40 p-3 text-sm font-mono break-all">
+                {senhaTemporaria?.senha}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={copiarSenha} className="gap-1">
+              <Copy className="h-4 w-4" /> Copiar senha
+            </Button>
+            <Button onClick={() => setSenhaTemporaria(null)}>Fechar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

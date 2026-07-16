@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TrocarSenhaObrigatoriaRouteImport } from './routes/trocar-senha-obrigatoria'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AceitarConviteRouteImport } from './routes/aceitar-convite'
@@ -26,6 +27,11 @@ import { Route as ApiPublicInboundEmailRouteImport } from './routes/api/public/i
 import { Route as AuthenticatedProjetosIdRouteImport } from './routes/_authenticated/projetos.$id'
 import { Route as AuthenticatedEmpresasIdRouteImport } from './routes/_authenticated/empresas.$id'
 
+const TrocarSenhaObrigatoriaRoute = TrocarSenhaObrigatoriaRouteImport.update({
+  id: '/trocar-senha-obrigatoria',
+  path: '/trocar-senha-obrigatoria',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
@@ -113,6 +119,7 @@ export interface FileRoutesByFullPath {
   '/aceitar-convite': typeof AceitarConviteRoute
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/trocar-senha-obrigatoria': typeof TrocarSenhaObrigatoriaRoute
   '/cronograma': typeof AuthenticatedCronogramaRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/editais': typeof AuthenticatedEditaisRoute
@@ -130,6 +137,7 @@ export interface FileRoutesByTo {
   '/aceitar-convite': typeof AceitarConviteRoute
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/trocar-senha-obrigatoria': typeof TrocarSenhaObrigatoriaRoute
   '/cronograma': typeof AuthenticatedCronogramaRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/editais': typeof AuthenticatedEditaisRoute
@@ -149,6 +157,7 @@ export interface FileRoutesById {
   '/aceitar-convite': typeof AceitarConviteRoute
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/trocar-senha-obrigatoria': typeof TrocarSenhaObrigatoriaRoute
   '/_authenticated/cronograma': typeof AuthenticatedCronogramaRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/editais': typeof AuthenticatedEditaisRoute
@@ -168,6 +177,7 @@ export interface FileRouteTypes {
     | '/aceitar-convite'
     | '/auth'
     | '/reset-password'
+    | '/trocar-senha-obrigatoria'
     | '/cronograma'
     | '/dashboard'
     | '/editais'
@@ -185,6 +195,7 @@ export interface FileRouteTypes {
     | '/aceitar-convite'
     | '/auth'
     | '/reset-password'
+    | '/trocar-senha-obrigatoria'
     | '/cronograma'
     | '/dashboard'
     | '/editais'
@@ -203,6 +214,7 @@ export interface FileRouteTypes {
     | '/aceitar-convite'
     | '/auth'
     | '/reset-password'
+    | '/trocar-senha-obrigatoria'
     | '/_authenticated/cronograma'
     | '/_authenticated/dashboard'
     | '/_authenticated/editais'
@@ -222,11 +234,19 @@ export interface RootRouteChildren {
   AceitarConviteRoute: typeof AceitarConviteRoute
   AuthRoute: typeof AuthRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  TrocarSenhaObrigatoriaRoute: typeof TrocarSenhaObrigatoriaRoute
   ApiPublicInboundEmailRoute: typeof ApiPublicInboundEmailRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/trocar-senha-obrigatoria': {
+      id: '/trocar-senha-obrigatoria'
+      path: '/trocar-senha-obrigatoria'
+      fullPath: '/trocar-senha-obrigatoria'
+      preLoaderRoute: typeof TrocarSenhaObrigatoriaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/reset-password': {
       id: '/reset-password'
       path: '/reset-password'
@@ -388,6 +408,7 @@ const rootRouteChildren: RootRouteChildren = {
   AceitarConviteRoute: AceitarConviteRoute,
   AuthRoute: AuthRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  TrocarSenhaObrigatoriaRoute: TrocarSenhaObrigatoriaRoute,
   ApiPublicInboundEmailRoute: ApiPublicInboundEmailRoute,
 }
 export const routeTree = rootRouteImport
