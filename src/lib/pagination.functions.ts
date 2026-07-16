@@ -49,7 +49,7 @@ export const listEmpresasPaginado = createServerFn({ method: "GET" })
     if (error) throw error;
 
     const hasMore = (rows?.length ?? 0) > pageSize;
-    const items = (rows ?? []).slice(0, pageSize);
+    const items = ((rows ?? []) as any[]).slice(0, pageSize);
     const nextCursor = hasMore ? items[items.length - 1]?.id : null;
 
     return {
@@ -106,7 +106,7 @@ export const listEditaisPaginado = createServerFn({ method: "GET" })
     if (error) throw error;
 
     const hasMore = (rows?.length ?? 0) > pageSize;
-    const items = (rows ?? []).slice(0, pageSize);
+    const items = ((rows ?? []) as any[]).slice(0, pageSize);
     const nextCursor = hasMore ? items[items.length - 1]?.id : null;
 
     return {
@@ -141,11 +141,15 @@ export const listMarcosPaginado = createServerFn({ method: "GET" })
 
       if (cursorRow) {
         const dataPrevista = cursorRow.data_prevista;
-        const created = new Date(cursorRow.created_at).toISOString();
+        const created = cursorRow.created_at
+          ? new Date(cursorRow.created_at).toISOString()
+          : new Date().toISOString();
 
-        query = query.or(
-          `data_prevista.gt.${dataPrevista},and(data_prevista.eq.${dataPrevista},created_at.lt.${created})`,
-        );
+        if (dataPrevista) {
+          query = query.or(
+            `data_prevista.gt.${dataPrevista},and(data_prevista.eq.${dataPrevista},created_at.lt.${created})`,
+          );
+        }
       }
     }
 
