@@ -136,7 +136,7 @@ export function AiInsightsPanel({
           </p>
         ) : (
           <div className="space-y-4">
-            {items.map((it: Record<string, unknown>) => (
+            {(items as any[]).map((it: any) => (
               <div key={it.id as string} className="rounded-lg border bg-muted/20 p-4">
                 <div className="flex items-start justify-between gap-3 mb-2">
                   <div className="min-w-0">
