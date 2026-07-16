@@ -24,6 +24,7 @@ export const listEmpresas = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("empresas_clientes")
       .select("*, consultor:consultor_responsavel_id(id,nome,email)")
+      .neq("status", "inativo")
       .order("razao_social")
       .limit(1000);
     if (error) throw error;
