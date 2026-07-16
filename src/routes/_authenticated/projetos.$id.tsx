@@ -731,26 +731,23 @@ function TimelineSection({ projetoId }: { projetoId: string }) {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Linha do tempo</CardTitle>
-        <Select value="filter" onValueChange={() => {}}>
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="Filtrar por tipo" />
-          </SelectTrigger>
-          <SelectContent>
-            {tiposDisponiveis.map((tipo) => (
-              <label key={tipo} className="flex items-center gap-2 p-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={filtroTipos.includes(tipo)}
-                  onChange={() => handleToggleTipo(tipo)}
-                  className="rounded"
-                />
-                <span className="text-sm">{tipoInteracaoLabel(tipo)}</span>
-              </label>
-            ))}
-          </SelectContent>
-        </Select>
+      <CardHeader className="flex flex-col gap-3">
+        <div className="flex flex-row items-center justify-between">
+          <CardTitle>Linha do tempo</CardTitle>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          {tiposDisponiveis.map((tipo) => (
+            <label key={tipo} className="flex items-center gap-2 cursor-pointer text-sm">
+              <input
+                type="checkbox"
+                checked={filtroTipos.includes(tipo)}
+                onChange={() => handleToggleTipo(tipo)}
+                className="rounded"
+              />
+              <span>{tipoInteracaoLabel(tipo)}</span>
+            </label>
+          ))}
+        </div>
       </CardHeader>
       <CardContent>
         {q.isLoading ? (
