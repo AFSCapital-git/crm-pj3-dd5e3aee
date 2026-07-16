@@ -153,7 +153,7 @@ function EmpresasPage() {
               <Plus className="mr-2 h-4 w-4" /> Nova empresa
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editing ? "Editar empresa" : "Nova empresa"}</DialogTitle>
             </DialogHeader>
