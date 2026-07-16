@@ -1,5 +1,9 @@
 // Validadores reutilizáveis (CNPJ, CPF, etc)
 
+export function onlyDigits(v: string): string {
+  return (v ?? "").replace(/\D+/g, "");
+}
+
 export function validarCNPJ(cnpj: string): boolean {
   const nums = cnpj.replace(/\D/g, "");
   if (nums.length !== 14) return false;
@@ -91,3 +95,33 @@ export const ALLOWED_MIME_TYPES = [
 ];
 
 export const MAX_DOCUMENT_SIZE = 25 * 1024 * 1024; // 25 MB
+
+export function validateCpfCnpj(input: string): string | null {
+  const digits = onlyDigits(input);
+  if (!digits) return "Informe o CPF ou CNPJ.";
+  if (digits.length === 11) return validarCPF(digits) ? null : "CPF inválido.";
+  if (digits.length === 14) return validarCNPJ(digits) ? null : "CNPJ inválido.";
+  return "Deve conter 11 (CPF) ou 14 (CNPJ) dígitos.";
+}
+
+export function validateEmail(input: string, required = false): string | null {
+  const v = (input ?? "").trim();
+  if (!v) return required ? "Informe o e-mail." : null;
+  const ok = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);
+  return ok ? null : "E-mail inválido.";
+}
+
+export function validateTelefone(input: string, required = false): string | null {
+  const d = onlyDigits(input);
+  if (!d) return required ? "Informe o telefone." : null;
+  if (d.length < 10 || d.length > 11) return "Telefone deve ter 10 ou 11 dígitos (com DDD).";
+  return null;
+}
+
+export function formatTelefone(input: string): string {
+  const d = onlyDigits(input).slice(0, 11);
+  if (d.length <= 10) {
+    return d.replace(/^(\d{2})(\d)/, "($1) $2").replace(/(\d{4})(\d)/, "$1-$2");
+  }
+  return d.replace(/^(\d{2})(\d)/, "($1) $2").replace(/(\d{5})(\d)/, "$1-$2");
+}
