@@ -176,9 +176,17 @@ export const listUsuarios = createServerFn({ method: "GET" })
       byUser[r.user_id] ??= [];
       byUser[r.user_id].push(r.role);
     }
+    const coordenadores: Record<string, string> = {};
+    for (const u of users ?? []) {
+      if (u.coordenador_id && !coordenadores[u.coordenador_id]) {
+        const coord = (users ?? []).find((c) => c.id === u.coordenador_id);
+        if (coord) coordenadores[u.coordenador_id] = coord.nome;
+      }
+    }
     return (users ?? []).map((u) => ({
       ...u,
       roles: byUser[u.id] ?? [],
+      coordenador_nome: u.coordenador_id ? coordenadores[u.coordenador_id] : null,
     }));
   });
 

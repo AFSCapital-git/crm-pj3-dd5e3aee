@@ -22,6 +22,26 @@ function newToken(): string {
   return b64url(bytes);
 }
 
+function gerarSenhaTemporaria(): string {
+  const maiusculas = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const minusculas = "abcdefghijklmnopqrstuvwxyz";
+  const digitos = "0123456789";
+  const simbolos = "!@#$%^&*";
+  const todos = maiusculas + minusculas + digitos + simbolos;
+
+  let senha = "";
+  senha += maiusculas[Math.floor(Math.random() * maiusculas.length)];
+  senha += minusculas[Math.floor(Math.random() * minusculas.length)];
+  senha += digitos[Math.floor(Math.random() * digitos.length)];
+  senha += simbolos[Math.floor(Math.random() * simbolos.length)];
+
+  for (let i = 0; i < 8; i++) {
+    senha += todos[Math.floor(Math.random() * todos.length)];
+  }
+
+  return senha.split("").sort(() => Math.random() - 0.5).join("");
+}
+
 async function assertAdmin(supabase: any, userId: string) {
   const { data, error } = await supabase.rpc("is_admin", { _user_id: userId });
   if (error) throw error;
@@ -50,8 +70,10 @@ export const criarConvite = createServerFn({ method: "POST" })
     z
       .object({
         email: z.string().trim().toLowerCase().email(),
-        papel: z.enum(["admin", "consultor"]),
+        papel: z.enum(["admin", "coordenador", "projetista"]),
         nome: z.string().trim().max(120).optional(),
+        coordenador_id: z.string().uuid().nullable().optional(),
+        ve_todos_projetos: z.boolean().optional(),
       })
       .parse(d),
   )
@@ -96,6 +118,8 @@ export const criarConvite = createServerFn({ method: "POST" })
         data_expiracao: expira,
         status: "pendente",
         convidado_por: context.userId,
+        coordenador_id: data.coordenador_id ?? null,
+        ve_todos_projetos: data.ve_todos_projetos ?? false,
       })
       .select("id,email_convidado,papel_designado,data_expiracao")
       .single();
@@ -105,7 +129,12 @@ export const criarConvite = createServerFn({ method: "POST" })
       usuario_que_executou: context.userId,
       acao: "convite_enviado",
       convite_id: convite.id,
-      detalhes_da_acao: { email: data.email, papel: data.papel },
+      detalhes_da_acao: {
+        email: data.email,
+        papel: data.papel,
+        coordenador_id: data.coordenador_id,
+        ve_todos_projetos: data.ve_todos_projetos,
+      },
     });
 
     return { convite, token };
@@ -247,13 +276,15 @@ export const aceitarConvite = createServerFn({ method: "POST" })
     const newUserId = created.user.id;
 
     // O trigger handle_new_user já cria usuarios_internos + role default.
-    // Ajusta status, nome, convidado_por e papel correto.
+    // Ajusta status, nome, convidado_por, coordenador_id, ve_todos_projetos e papel correto.
     await supabaseAdmin
       .from("usuarios_internos")
       .update({
         nome: data.nome,
         status: "ativo",
         convidado_por: c.convidado_por,
+        coordenador_id: c.coordenador_id,
+        ve_todos_projetos: c.ve_todos_projetos,
       })
       .eq("id", newUserId);
 
@@ -290,7 +321,14 @@ export const aceitarConvite = createServerFn({ method: "POST" })
 export const alterarPapel = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({ user_id: z.string().uuid(), papel: z.enum(["admin", "consultor"]) }).parse(d),
+    z
+      .object({
+        user_id: z.string().uuid(),
+        papel: z.enum(["admin", "coordenador", "projetista"]),
+        coordenador_id: z.string().uuid().nullable().optional(),
+        ve_todos_projetos: z.boolean().optional(),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
@@ -313,7 +351,6 @@ export const alterarPapel = createServerFn({ method: "POST" })
       .from("user_roles")
       .insert({ user_id: data.user_id, role: data.papel });
     if (eIns) {
-      // rollback best-effort: reinsere a role anterior
       if (antes)
         await supabaseAdmin
           .from("user_roles")
@@ -321,13 +358,96 @@ export const alterarPapel = createServerFn({ method: "POST" })
       throw eIns;
     }
 
+    const updateData: Record<string, any> = {};
+    if (data.coordenador_id !== undefined) updateData.coordenador_id = data.coordenador_id;
+    if (data.ve_todos_projetos !== undefined) updateData.ve_todos_projetos = data.ve_todos_projetos;
+    if (Object.keys(updateData).length > 0) {
+      await supabaseAdmin.from("usuarios_internos").update(updateData).eq("id", data.user_id);
+    }
+
     await supabaseAdmin.from("log_auditoria_admin").insert({
       usuario_que_executou: context.userId,
       acao: "papel_alterado",
       usuario_afetado: data.user_id,
-      detalhes_da_acao: { de: antes || null, para: data.papel },
+      detalhes_da_acao: {
+        de: antes || null,
+        para: data.papel,
+        coordenador_id: data.coordenador_id,
+        ve_todos_projetos: data.ve_todos_projetos,
+      },
     });
     return { ok: true };
+  });
+
+export const criarUsuarioDireto = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        nome: z.string().trim().min(2).max(120),
+        email: z.string().trim().toLowerCase().email(),
+        papel: z.enum(["admin", "coordenador", "projetista"]),
+        coordenador_id: z.string().uuid().nullable().optional(),
+        ve_todos_projetos: z.boolean().optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Já existe usuário ativo com esse e-mail?
+    const { data: existente } = await supabaseAdmin
+      .from("usuarios_internos")
+      .select("id,status")
+      .eq("email", data.email)
+      .maybeSingle();
+    if (existente && existente.status !== "desativado") {
+      throw new Error("Já existe um usuário ativo com esse e-mail.");
+    }
+
+    const senhaTemporaria = gerarSenhaTemporaria();
+
+    const { data: created, error: e1 } = await supabaseAdmin.auth.admin.createUser({
+      email: data.email,
+      password: senhaTemporaria,
+      email_confirm: true,
+      user_metadata: { nome: data.nome },
+    });
+    if (e1 || !created?.user) throw new Error(e1?.message ?? "Falha ao criar usuário.");
+    const newUserId = created.user.id;
+
+    await supabaseAdmin
+      .from("usuarios_internos")
+      .update({
+        nome: data.nome,
+        status: "ativo",
+        senha_temporaria: true,
+        convidado_por: context.userId,
+        coordenador_id: data.coordenador_id ?? null,
+        ve_todos_projetos: data.ve_todos_projetos ?? false,
+      })
+      .eq("id", newUserId);
+
+    await supabaseAdmin.from("user_roles").delete().eq("user_id", newUserId);
+    const { error: e2 } = await supabaseAdmin
+      .from("user_roles")
+      .insert({ user_id: newUserId, role: data.papel });
+    if (e2) throw e2;
+
+    await supabaseAdmin.from("log_auditoria_admin").insert({
+      usuario_que_executou: context.userId,
+      acao: "usuario_criado_direto",
+      usuario_afetado: newUserId,
+      detalhes_da_acao: {
+        email: data.email,
+        papel: data.papel,
+        coordenador_id: data.coordenador_id,
+        ve_todos_projetos: data.ve_todos_projetos,
+      },
+    });
+
+    return { senhaTemporaria, email: data.email };
   });
 
 export const setUsuarioStatus = createServerFn({ method: "POST" })

@@ -15,6 +15,6 @@ export const getCurrentUser = createServerFn({ method: "GET" })
       nome: profile?.nome ?? "",
       email: profile?.email ?? "",
       ativo: profile?.ativo ?? true,
-      role: role as "admin" | "consultor" | null,
+      role: role as "admin" | "coordenador" | "projetista" | null,
     };
   });
