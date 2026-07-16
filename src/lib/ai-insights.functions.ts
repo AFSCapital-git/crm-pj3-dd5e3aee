@@ -281,7 +281,7 @@ ${resumo}`,
       .select()
       .single();
     if (error) throw error;
-    return row as Record<string, unknown>;
+    return row as any;
   });
 
 export const gerarRascunhoRelatorio = createServerFn({ method: "POST" })
@@ -363,7 +363,7 @@ ${(emails ?? []).map((e) => `- "${e.assunto}" de ${e.remetente_original} (${Stri
       .select()
       .single();
     if (error) throw error;
-    return row as Record<string, unknown>;
+    return row as any;
   });
 
 export const revisarInsight = createServerFn({ method: "POST" })
@@ -389,7 +389,7 @@ export const revisarInsight = createServerFn({ method: "POST" })
       .select()
       .single();
     if (error) throw error;
-    return row as Record<string, unknown>;
+    return row as any;
   });
 
 export const deleteInsight = createServerFn({ method: "POST" })
