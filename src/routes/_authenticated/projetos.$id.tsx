@@ -316,7 +316,7 @@ function TarefasSection({
             <TarefaForm
               projetoId={projetoId}
               usuariosList={usuariosList}
-              onSubmit={(v: any) => mUpsert.mutate(v)}
+              onSubmit={(v: any) => mUpsert.mutate({ projeto_id: projetoId, values: v })}
               loading={mUpsert.isPending}
             />
           </DialogContent>
@@ -398,7 +398,6 @@ function TarefaForm({
   const handleSubmit = () => {
     if (!titulo.trim()) return;
     onSubmit({
-      projeto_id: projetoId,
       titulo: titulo.trim(),
       descricao: descricao.trim() || null,
       responsavel_id: responsavelId || null,
