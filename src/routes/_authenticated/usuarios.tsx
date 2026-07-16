@@ -1,33 +1,10 @@
-<<<<<<< HEAD
-import { createFileRoute } from "@tanstack/react-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
-import { toast } from "sonner";
-import { listUsuarios } from "@/lib/dashboard.functions";
-import { deactivateUser, reactivateUser } from "@/lib/usuarios.functions";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { AlertCircle } from "lucide-react";
-=======
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  listUsuarios,
-  reassignEmpresasConsultor,
-} from "@/lib/dashboard.functions";
+import { listUsuarios, reassignEmpresasConsultor } from "@/lib/dashboard.functions";
 import {
   listConvites,
   criarConvite,
@@ -39,28 +16,65 @@ import {
 } from "@/lib/admin.functions";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Shield, UserCog, Users, Mail, Copy, Send, Ban, RefreshCw, Plus,
-  ClipboardList, Search as SearchIcon, Clock, AlertTriangle,
-  UserPlus, UserMinus, UserCheck, Ban as BanIcon, KeyRound, MailCheck,
+  Shield,
+  UserCog,
+  Users,
+  Mail,
+  Copy,
+  Send,
+  Ban,
+  RefreshCw,
+  Plus,
+  ClipboardList,
+  Search as SearchIcon,
+  Clock,
+  AlertTriangle,
+  UserPlus,
+  UserMinus,
+  UserCheck,
+  Ban as BanIcon,
+  KeyRound,
+  MailCheck,
 } from "lucide-react";
->>>>>>> 1b78db33cd458632241ee46c1aee77bd182e17de
 
 export const Route = createFileRoute("/_authenticated/usuarios")({
   ssr: false,
@@ -68,39 +82,16 @@ export const Route = createFileRoute("/_authenticated/usuarios")({
     const { data } = await supabase.auth.getUser();
     if (!data.user) throw redirect({ to: "/auth" });
     const { data: role } = await supabase
-      .from("user_roles").select("role").eq("user_id", data.user.id).eq("role", "admin").maybeSingle();
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", data.user.id)
+      .eq("role", "admin")
+      .maybeSingle();
     if (!role) throw redirect({ to: "/dashboard" });
   },
   component: AdminPage,
 });
 
-<<<<<<< HEAD
-function UsuariosPage() {
-  const fn = useServerFn(listUsuarios);
-  const deactivate = useServerFn(deactivateUser);
-  const reactivate = useServerFn(reactivateUser);
-  const qc = useQueryClient();
-  const q = useQuery({ queryKey: ["usuarios-full"], queryFn: () => fn() });
-
-  const mDeactivate = useMutation({
-    mutationFn: (userId: string) => deactivate({ data: { userId } }),
-    onSuccess: () => {
-      toast.success("Usuário desativado");
-      qc.invalidateQueries({ queryKey: ["usuarios-full"] });
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const mReactivate = useMutation({
-    mutationFn: (userId: string) => reactivate({ data: { userId } }),
-    onSuccess: () => {
-      toast.success("Usuário reativado");
-      qc.invalidateQueries({ queryKey: ["usuarios-full"] });
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-=======
 // ---------- helpers ----------
 
 function RoleBadge({ role }: { role: string }) {
@@ -150,18 +141,29 @@ function ConviteStatusBadge({ status }: { status: string }) {
     pendente: { label: "Pendente", cls: "bg-amber-500/15 text-amber-700 border-amber-500/40" },
     aceito: { label: "Aceito", cls: "bg-emerald-500/15 text-emerald-700 border-emerald-500/40" },
     expirado: { label: "Expirado", cls: "bg-muted text-muted-foreground border-border" },
-    revogado: { label: "Revogado", cls: "bg-destructive/15 text-destructive border-destructive/40" },
+    revogado: {
+      label: "Revogado",
+      cls: "bg-destructive/15 text-destructive border-destructive/40",
+    },
   };
   const m = map[status] ?? map.pendente;
-  return <Badge variant="outline" className={m.cls}>{m.label}</Badge>;
+  return (
+    <Badge variant="outline" className={m.cls}>
+      {m.label}
+    </Badge>
+  );
 }
 
 function statusRowClass(status: string) {
   switch (status) {
-    case "ativo": return "border-l-4 border-l-emerald-500/70";
-    case "convidado": return "border-l-4 border-l-amber-500/70";
-    case "desativado": return "border-l-4 border-l-muted-foreground/40 opacity-70";
-    default: return "";
+    case "ativo":
+      return "border-l-4 border-l-emerald-500/70";
+    case "convidado":
+      return "border-l-4 border-l-amber-500/70";
+    case "desativado":
+      return "border-l-4 border-l-muted-foreground/40 opacity-70";
+    default:
+      return "";
   }
 }
 
@@ -181,10 +183,13 @@ function expiracaoInfo(iso: string): { texto: string; tone: "ok" | "warn" | "dan
 function ExpiracaoBadge({ iso }: { iso: string }) {
   const info = expiracaoInfo(iso);
   const cls =
-    info.tone === "ok" ? "bg-muted text-muted-foreground border-border"
-    : info.tone === "warn" ? "bg-amber-500/15 text-amber-700 border-amber-500/40"
-    : info.tone === "danger" ? "bg-destructive/15 text-destructive border-destructive/40"
-    : "bg-destructive/15 text-destructive border-destructive/40";
+    info.tone === "ok"
+      ? "bg-muted text-muted-foreground border-border"
+      : info.tone === "warn"
+        ? "bg-amber-500/15 text-amber-700 border-amber-500/40"
+        : info.tone === "danger"
+          ? "bg-destructive/15 text-destructive border-destructive/40"
+          : "bg-destructive/15 text-destructive border-destructive/40";
   return (
     <Badge variant="outline" className={`gap-1 ${cls}`}>
       <Clock className="h-3 w-3" /> {info.texto}
@@ -194,8 +199,11 @@ function ExpiracaoBadge({ iso }: { iso: string }) {
 
 function fmtData(iso: string) {
   return new Date(iso).toLocaleString("pt-BR", {
-    day: "2-digit", month: "2-digit", year: "numeric",
-    hour: "2-digit", minute: "2-digit",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 
@@ -216,22 +224,38 @@ function descreverLog(l: any): { icon: React.ReactNode; frase: React.ReactNode }
     case "convite_enviado":
       return {
         icon: <UserPlus className="h-4 w-4 text-amber-600" />,
-        frase: <>{executor} convidou {alvo} como <em>{papel}</em> em {quando}</>,
+        frase: (
+          <>
+            {executor} convidou {alvo} como <em>{papel}</em> em {quando}
+          </>
+        ),
       };
     case "convite_reenviado":
       return {
         icon: <RefreshCw className="h-4 w-4 text-amber-600" />,
-        frase: <>{executor} reenviou o convite para {alvo} em {quando}</>,
+        frase: (
+          <>
+            {executor} reenviou o convite para {alvo} em {quando}
+          </>
+        ),
       };
     case "convite_revogado":
       return {
         icon: <BanIcon className="h-4 w-4 text-destructive" />,
-        frase: <>{executor} revogou o convite de {alvo} em {quando}</>,
+        frase: (
+          <>
+            {executor} revogou o convite de {alvo} em {quando}
+          </>
+        ),
       };
     case "convite_aceito":
       return {
         icon: <MailCheck className="h-4 w-4 text-emerald-600" />,
-        frase: <>{alvo} aceitou o convite como <em>{papel}</em> em {quando}</>,
+        frase: (
+          <>
+            {alvo} aceitou o convite como <em>{papel}</em> em {quando}
+          </>
+        ),
       };
     case "papel_alterado":
       return {
@@ -239,24 +263,42 @@ function descreverLog(l: any): { icon: React.ReactNode; frase: React.ReactNode }
         frase: (
           <>
             {executor} alterou o papel de {alvo}
-            {d.de ? <> de <em>{d.de}</em></> : null} para <em>{d.para}</em> em {quando}
+            {d.de ? (
+              <>
+                {" "}
+                de <em>{d.de}</em>
+              </>
+            ) : null}{" "}
+            para <em>{d.para}</em> em {quando}
           </>
         ),
       };
     case "usuario_desativado":
       return {
         icon: <UserMinus className="h-4 w-4 text-destructive" />,
-        frase: <>{executor} desativou {alvo} em {quando}</>,
+        frase: (
+          <>
+            {executor} desativou {alvo} em {quando}
+          </>
+        ),
       };
     case "usuario_reativado":
       return {
         icon: <UserCheck className="h-4 w-4 text-emerald-600" />,
-        frase: <>{executor} reativou {alvo} em {quando}</>,
+        frase: (
+          <>
+            {executor} reativou {alvo} em {quando}
+          </>
+        ),
       };
     default:
       return {
         icon: <ClipboardList className="h-4 w-4 text-muted-foreground" />,
-        frase: <>{executor} executou <em>{l.acao}</em> em {quando}</>,
+        frase: (
+          <>
+            {executor} executou <em>{l.acao}</em> em {quando}
+          </>
+        ),
       };
   }
 }
@@ -274,34 +316,47 @@ const ACAO_LABEL: Record<string, string> = {
 // ---------- página ----------
 
 type UsuarioRow = {
-  id: string; nome: string; email: string; status: string; ativo: boolean;
-  ultimo_login: string | null; roles: string[]; empresas_count: number;
+  id: string;
+  nome: string;
+  email: string;
+  status: string;
+  ativo: boolean;
+  ultimo_login: string | null;
+  roles: string[];
+  empresas_count: number;
 };
 
 function AdminPage() {
->>>>>>> 1b78db33cd458632241ee46c1aee77bd182e17de
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Administração</h1>
         <p className="text-sm text-muted-foreground">
-<<<<<<< HEAD
-          Consultores e administradores da consultoria. Novos usuários são criados via tela de
-          cadastro em /auth. O primeiro usuário criado vira admin; os demais entram como consultor.
-=======
           Usuários, permissões, convites e trilha de auditoria. Acesso restrito a administradores.
->>>>>>> 1b78db33cd458632241ee46c1aee77bd182e17de
         </p>
       </div>
       <Tabs defaultValue="usuarios">
         <TabsList className="w-full sm:w-auto grid grid-cols-3 sm:inline-flex">
-          <TabsTrigger value="usuarios" className="gap-1"><Users className="h-4 w-4" /> <span className="hidden sm:inline">Usuários</span></TabsTrigger>
-          <TabsTrigger value="convites" className="gap-1"><Mail className="h-4 w-4" /> <span className="hidden sm:inline">Convites</span></TabsTrigger>
-          <TabsTrigger value="log" className="gap-1"><ClipboardList className="h-4 w-4" /> <span className="hidden sm:inline">Auditoria</span></TabsTrigger>
+          <TabsTrigger value="usuarios" className="gap-1">
+            <Users className="h-4 w-4" /> <span className="hidden sm:inline">Usuários</span>
+          </TabsTrigger>
+          <TabsTrigger value="convites" className="gap-1">
+            <Mail className="h-4 w-4" /> <span className="hidden sm:inline">Convites</span>
+          </TabsTrigger>
+          <TabsTrigger value="log" className="gap-1">
+            <ClipboardList className="h-4 w-4" />{" "}
+            <span className="hidden sm:inline">Auditoria</span>
+          </TabsTrigger>
         </TabsList>
-        <TabsContent value="usuarios" className="mt-4"><UsuariosTab /></TabsContent>
-        <TabsContent value="convites" className="mt-4"><ConvitesTab /></TabsContent>
-        <TabsContent value="log" className="mt-4"><LogTab /></TabsContent>
+        <TabsContent value="usuarios" className="mt-4">
+          <UsuariosTab />
+        </TabsContent>
+        <TabsContent value="convites" className="mt-4">
+          <ConvitesTab />
+        </TabsContent>
+        <TabsContent value="log" className="mt-4">
+          <LogTab />
+        </TabsContent>
       </Tabs>
     </div>
   );
@@ -342,7 +397,8 @@ function UsuariosTab() {
   const [novoPapel, setNovoPapel] = useState<"admin" | "consultor">("consultor");
 
   const mStatus = useMutation({
-    mutationFn: (v: { user_id: string; status: "ativo" | "desativado" }) => setStatusFn({ data: v }),
+    mutationFn: (v: { user_id: string; status: "ativo" | "desativado" }) =>
+      setStatusFn({ data: v }),
     onSuccess: (_r, v) => {
       toast.success(v.status === "ativo" ? "Usuário reativado" : "Usuário desativado");
       qc.invalidateQueries({ queryKey: ["admin-usuarios"] });
@@ -356,13 +412,15 @@ function UsuariosTab() {
     onSuccess: (r: any) => {
       toast.success(`${r.count} cliente(s) reatribuído(s)`);
       qc.invalidateQueries({ queryKey: ["admin-usuarios"] });
-      setReassigning(null); setReassignTo("");
+      setReassigning(null);
+      setReassignTo("");
     },
     onError: (e: any) => toast.error(e.message),
   });
 
   const mPapel = useMutation({
-    mutationFn: (v: { user_id: string; papel: "admin" | "consultor" }) => alterarPapelFn({ data: v }),
+    mutationFn: (v: { user_id: string; papel: "admin" | "consultor" }) =>
+      alterarPapelFn({ data: v }),
     onSuccess: () => {
       toast.success("Papel atualizado");
       qc.invalidateQueries({ queryKey: ["admin-usuarios"] });
@@ -381,94 +439,26 @@ function UsuariosTab() {
   return (
     <div className="space-y-4">
       <Card>
-<<<<<<< HEAD
-        <CardHeader>
-          <CardTitle>Lista</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {q.isLoading ? (
-            <p>Carregando…</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>E-mail</TableHead>
-                  <TableHead>Papéis</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {(q.data ?? []).map((u: Record<string, unknown>) => {
-                  const isInactive = !(u.ativo as boolean);
-                  return (
-                    <TableRow key={u.id as string} className={isInactive ? "opacity-60" : ""}>
-                      <TableCell className="font-medium">{u.nome as string}</TableCell>
-                      <TableCell>{u.email as string}</TableCell>
-                      <TableCell className="space-x-1">
-                        {((u.roles as Array<string>) ?? []).map((r: string) => (
-                          <Badge key={r} variant="outline">
-                            {r}
-                          </Badge>
-                        ))}
-                        {((u.roles as Array<string>) ?? []).length === 0 && (
-                          <span className="text-muted-foreground text-sm">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={isInactive ? "destructive" : "outline"}>
-                          {isInactive ? "Inativo" : "Ativo"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="space-x-2">
-                        {isInactive ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => mReactivate.mutate(u.id as string)}
-                            disabled={mReactivate.isPending}
-                          >
-                            Reativar
-                          </Button>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => {
-                              if (
-                                confirm(
-                                  `Desativar ${u.nome}? Isso bloqueará o acesso imediatamente.`,
-                                )
-                              ) {
-                                mDeactivate.mutate(u.id as string);
-                              }
-                            }}
-                            disabled={mDeactivate.isPending}
-                          >
-                            Desativar
-                          </Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-=======
         <CardContent className="pt-6 flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-3">
           <div className="flex-1 min-w-[200px]">
             <Label>Buscar</Label>
             <div className="relative">
               <SearchIcon className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input className="pl-8" placeholder="Nome ou e-mail" value={busca} onChange={(e) => setBusca(e.target.value)} />
+              <Input
+                className="pl-8"
+                placeholder="Nome ou e-mail"
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+              />
             </div>
           </div>
           <div className="grid grid-cols-2 sm:flex gap-3">
             <div>
               <Label>Status</Label>
               <Select value={filtroStatus} onValueChange={setFiltroStatus}>
-                <SelectTrigger className="w-full sm:w-[160px]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-full sm:w-[160px]">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todos">Todos</SelectItem>
                   <SelectItem value="ativo">Ativo</SelectItem>
@@ -480,7 +470,9 @@ function UsuariosTab() {
             <div>
               <Label>Papel</Label>
               <Select value={filtroPapel} onValueChange={setFiltroPapel}>
-                <SelectTrigger className="w-full sm:w-[160px]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-full sm:w-[160px]">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todos">Todos</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
@@ -497,8 +489,12 @@ function UsuariosTab() {
           <CardTitle>Usuários ({filtered.length})</CardTitle>
         </CardHeader>
         <CardContent>
-          {q.isLoading ? <p>Carregando…</p> : filtered.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-6 text-center">Nenhum usuário encontrado com esses filtros.</p>
+          {q.isLoading ? (
+            <p>Carregando…</p>
+          ) : filtered.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-6 text-center">
+              Nenhum usuário encontrado com esses filtros.
+            </p>
           ) : (
             <>
               {/* Tabela desktop */}
@@ -521,10 +517,15 @@ function UsuariosTab() {
                         <TableCell className="font-medium">{u.nome}</TableCell>
                         <TableCell className="text-muted-foreground">{u.email}</TableCell>
                         <TableCell className="space-x-1">
-                          {u.roles.length === 0 ? <span className="text-xs text-muted-foreground">—</span>
-                            : u.roles.map((r) => <RoleBadge key={r} role={r} />)}
+                          {u.roles.length === 0 ? (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          ) : (
+                            u.roles.map((r) => <RoleBadge key={r} role={r} />)
+                          )}
                         </TableCell>
-                        <TableCell><StatusBadge status={u.status} /></TableCell>
+                        <TableCell>
+                          <StatusBadge status={u.status} />
+                        </TableCell>
                         <TableCell className="text-xs text-muted-foreground">
                           {u.ultimo_login ? fmtData(u.ultimo_login) : "—"}
                         </TableCell>
@@ -544,10 +545,16 @@ function UsuariosTab() {
                                 else mStatus.mutate({ user_id: u.id, status: "ativo" });
                               }}
                             />
-                            <Button size="sm" variant="outline" onClick={() => {
-                              setEditing(u);
-                              setNovoPapel((u.roles.includes("admin") ? "admin" : "consultor"));
-                            }}>Editar</Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setEditing(u);
+                                setNovoPapel(u.roles.includes("admin") ? "admin" : "consultor");
+                              }}
+                            >
+                              Editar
+                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -559,7 +566,10 @@ function UsuariosTab() {
               {/* Cards mobile */}
               <div className="md:hidden space-y-3">
                 {filtered.map((u) => (
-                  <div key={u.id} className={`rounded-lg border bg-card p-3 ${statusRowClass(u.status)}`}>
+                  <div
+                    key={u.id}
+                    className={`rounded-lg border bg-card p-3 ${statusRowClass(u.status)}`}
+                  >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <div className="font-medium truncate">{u.nome}</div>
@@ -568,8 +578,11 @@ function UsuariosTab() {
                       <StatusBadge status={u.status} />
                     </div>
                     <div className="mt-2 flex flex-wrap items-center gap-2">
-                      {u.roles.length === 0 ? <span className="text-xs text-muted-foreground">Sem papel</span>
-                        : u.roles.map((r) => <RoleBadge key={r} role={r} />)}
+                      {u.roles.length === 0 ? (
+                        <span className="text-xs text-muted-foreground">Sem papel</span>
+                      ) : (
+                        u.roles.map((r) => <RoleBadge key={r} role={r} />)
+                      )}
                       <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                         <Users className="h-3 w-3" /> {u.empresas_count} clientes
                       </span>
@@ -589,10 +602,16 @@ function UsuariosTab() {
                         />
                         {u.status === "ativo" ? "Ativo" : "Desativado"}
                       </label>
-                      <Button size="sm" variant="outline" onClick={() => {
-                        setEditing(u);
-                        setNovoPapel((u.roles.includes("admin") ? "admin" : "consultor"));
-                      }}>Editar papel</Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setEditing(u);
+                          setNovoPapel(u.roles.includes("admin") ? "admin" : "consultor");
+                        }}
+                      >
+                        Editar papel
+                      </Button>
                     </div>
                   </div>
                 ))}
@@ -603,7 +622,10 @@ function UsuariosTab() {
       </Card>
 
       {/* Confirmação de desativação (sempre) */}
-      <AlertDialog open={!!confirmDeactivate} onOpenChange={(o) => !o && setConfirmDeactivate(null)}>
+      <AlertDialog
+        open={!!confirmDeactivate}
+        onOpenChange={(o) => !o && setConfirmDeactivate(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
@@ -614,11 +636,14 @@ function UsuariosTab() {
               <div className="space-y-2 text-sm">
                 <p>Ao confirmar, este usuário:</p>
                 <ul className="list-disc pl-5 space-y-1">
-                  <li>Terá a <strong>sessão encerrada imediatamente</strong> e não poderá mais acessar o sistema.</li>
+                  <li>
+                    Terá a <strong>sessão encerrada imediatamente</strong> e não poderá mais acessar
+                    o sistema.
+                  </li>
                   {(confirmDeactivate?.empresas_count ?? 0) > 0 ? (
                     <li>
-                      Deixará <strong>{confirmDeactivate?.empresas_count} cliente(s)</strong> sem consultor ativo — você
-                      será levado à tela de reatribuição em seguida.
+                      Deixará <strong>{confirmDeactivate?.empresas_count} cliente(s)</strong> sem
+                      consultor ativo — você será levado à tela de reatribuição em seguida.
                     </li>
                   ) : (
                     <li>Não possui carteira de clientes — nenhuma reatribuição será necessária.</li>
@@ -647,35 +672,60 @@ function UsuariosTab() {
       </AlertDialog>
 
       {/* Reatribuição */}
-      <Dialog open={!!reassigning} onOpenChange={(o) => { if (!o) { setReassigning(null); setReassignTo(""); } }}>
+      <Dialog
+        open={!!reassigning}
+        onOpenChange={(o) => {
+          if (!o) {
+            setReassigning(null);
+            setReassignTo("");
+          }
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Reatribuir carteira de {reassigning?.nome}</DialogTitle>
             <DialogDescription>
-              Os <strong>{reassigning?.empresas_count} cliente(s)</strong> serão transferidos para outro consultor ativo.
+              Os <strong>{reassigning?.empresas_count} cliente(s)</strong> serão transferidos para
+              outro consultor ativo.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
             <Label>Novo consultor</Label>
             <Select value={reassignTo} onValueChange={setReassignTo}>
-              <SelectTrigger><SelectValue placeholder="Selecione um consultor ativo" /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione um consultor ativo" />
+              </SelectTrigger>
               <SelectContent>
                 {activeConsultores.map((u) => (
-                  <SelectItem key={u.id} value={u.id}>{u.nome} ({u.empresas_count} clientes)</SelectItem>
+                  <SelectItem key={u.id} value={u.id}>
+                    {u.nome} ({u.empresas_count} clientes)
+                  </SelectItem>
                 ))}
                 {activeConsultores.length === 0 && (
-                  <div className="px-3 py-2 text-sm text-muted-foreground">Nenhum outro consultor ativo.</div>
+                  <div className="px-3 py-2 text-sm text-muted-foreground">
+                    Nenhum outro consultor ativo.
+                  </div>
                 )}
               </SelectContent>
             </Select>
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => { setReassigning(null); setReassignTo(""); }}>Depois</Button>
-            <Button disabled={!reassignTo || mReassign.isPending}
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setReassigning(null);
+                setReassignTo("");
+              }}
+            >
+              Depois
+            </Button>
+            <Button
+              disabled={!reassignTo || mReassign.isPending}
               onClick={() => {
                 if (reassigning && reassignTo)
                   mReassign.mutate({ from_user_id: reassigning.id, to_user_id: reassignTo });
-              }}>
+              }}
+            >
               {mReassign.isPending ? "Reatribuindo…" : "Confirmar"}
             </Button>
           </DialogFooter>
@@ -688,13 +738,16 @@ function UsuariosTab() {
           <DialogHeader>
             <DialogTitle>Editar {editing?.nome}</DialogTitle>
             <DialogDescription>
-              Altere o papel do usuário. Não é possível remover o papel admin do último administrador ativo.
+              Altere o papel do usuário. Não é possível remover o papel admin do último
+              administrador ativo.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
             <Label>Papel</Label>
             <Select value={novoPapel} onValueChange={(v: any) => setNovoPapel(v)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="admin">Admin</SelectItem>
                 <SelectItem value="consultor">Consultor</SelectItem>
@@ -702,10 +755,17 @@ function UsuariosTab() {
             </Select>
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setEditing(null)}>Cancelar</Button>
-            <Button disabled={mPapel.isPending} onClick={() => {
-              if (editing) mPapel.mutate({ user_id: editing.id, papel: novoPapel });
-            }}>{mPapel.isPending ? "Salvando…" : "Salvar"}</Button>
+            <Button variant="ghost" onClick={() => setEditing(null)}>
+              Cancelar
+            </Button>
+            <Button
+              disabled={mPapel.isPending}
+              onClick={() => {
+                if (editing) mPapel.mutate({ user_id: editing.id, papel: novoPapel });
+              }}
+            >
+              {mPapel.isPending ? "Salvando…" : "Salvar"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -741,7 +801,10 @@ function ConvitesTab() {
     onSuccess: (r: any) => {
       const link = buildLink(r.token);
       setLinkGerado({ link, email: r.convite.email_convidado });
-      setEmail(""); setNome(""); setPapel("consultor"); setOpenNovo(false);
+      setEmail("");
+      setNome("");
+      setPapel("consultor");
+      setOpenNovo(false);
       qc.invalidateQueries({ queryKey: ["admin-convites"] });
       qc.invalidateQueries({ queryKey: ["admin-log"] });
     },
@@ -789,10 +852,14 @@ function ConvitesTab() {
       </div>
 
       <Card>
-        <CardHeader><CardTitle>Convites pendentes ({pendentes.length})</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>Convites pendentes ({pendentes.length})</CardTitle>
+        </CardHeader>
         <CardContent>
           {pendentes.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-6">Nenhum convite pendente.</p>
+            <p className="text-sm text-muted-foreground text-center py-6">
+              Nenhum convite pendente.
+            </p>
           ) : (
             <>
               {/* Desktop */}
@@ -811,17 +878,31 @@ function ConvitesTab() {
                     {pendentes.map((c) => (
                       <TableRow key={c.id}>
                         <TableCell className="font-medium">{c.email_convidado}</TableCell>
-                        <TableCell><RoleBadge role={c.papel_designado} /></TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{fmtData(c.criado_em)}</TableCell>
-                        <TableCell><ExpiracaoBadge iso={c.data_expiracao} /></TableCell>
+                        <TableCell>
+                          <RoleBadge role={c.papel_designado} />
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {fmtData(c.criado_em)}
+                        </TableCell>
+                        <TableCell>
+                          <ExpiracaoBadge iso={c.data_expiracao} />
+                        </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
-                            <Button size="sm" variant="outline" disabled={mReenviar.isPending}
-                              onClick={() => mReenviar.mutate(c.id)}>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={mReenviar.isPending}
+                              onClick={() => mReenviar.mutate(c.id)}
+                            >
                               <RefreshCw className="h-3.5 w-3.5 mr-1" /> Reenviar
                             </Button>
-                            <Button size="sm" variant="ghost" className="text-destructive"
-                              onClick={() => setConfirmRevogar(c)}>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-destructive"
+                              onClick={() => setConfirmRevogar(c)}
+                            >
                               <Ban className="h-3.5 w-3.5 mr-1" /> Revogar
                             </Button>
                           </div>
@@ -835,11 +916,16 @@ function ConvitesTab() {
               {/* Mobile */}
               <div className="md:hidden space-y-3">
                 {pendentes.map((c) => (
-                  <div key={c.id} className="rounded-lg border bg-card p-3 border-l-4 border-l-amber-500/70">
+                  <div
+                    key={c.id}
+                    className="rounded-lg border bg-card p-3 border-l-4 border-l-amber-500/70"
+                  >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <div className="font-medium break-all">{c.email_convidado}</div>
-                        <div className="mt-1"><RoleBadge role={c.papel_designado} /></div>
+                        <div className="mt-1">
+                          <RoleBadge role={c.papel_designado} />
+                        </div>
                       </div>
                       <ExpiracaoBadge iso={c.data_expiracao} />
                     </div>
@@ -847,12 +933,21 @@ function ConvitesTab() {
                       Enviado em {fmtData(c.criado_em)}
                     </div>
                     <div className="mt-3 flex gap-2">
-                      <Button size="sm" variant="outline" className="flex-1" disabled={mReenviar.isPending}
-                        onClick={() => mReenviar.mutate(c.id)}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1"
+                        disabled={mReenviar.isPending}
+                        onClick={() => mReenviar.mutate(c.id)}
+                      >
                         <RefreshCw className="h-3.5 w-3.5 mr-1" /> Reenviar
                       </Button>
-                      <Button size="sm" variant="outline" className="flex-1 text-destructive"
-                        onClick={() => setConfirmRevogar(c)}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 text-destructive"
+                        onClick={() => setConfirmRevogar(c)}
+                      >
                         <Ban className="h-3.5 w-3.5 mr-1" /> Revogar
                       </Button>
                     </div>
@@ -866,7 +961,9 @@ function ConvitesTab() {
 
       {historico.length > 0 && (
         <Card>
-          <CardHeader><CardTitle>Histórico de convites</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle>Histórico de convites</CardTitle>
+          </CardHeader>
           <CardContent>
             {/* Desktop */}
             <div className="hidden md:block">
@@ -884,9 +981,15 @@ function ConvitesTab() {
                   {historico.map((c) => (
                     <TableRow key={c.id}>
                       <TableCell>{c.email_convidado}</TableCell>
-                      <TableCell><RoleBadge role={c.papel_designado} /></TableCell>
-                      <TableCell><ConviteStatusBadge status={c.status} /></TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{fmtData(c.criado_em)}</TableCell>
+                      <TableCell>
+                        <RoleBadge role={c.papel_designado} />
+                      </TableCell>
+                      <TableCell>
+                        <ConviteStatusBadge status={c.status} />
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {fmtData(c.criado_em)}
+                      </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {c.aceito_em ? fmtData(c.aceito_em) : "—"}
                       </TableCell>
@@ -924,13 +1027,19 @@ function ConvitesTab() {
           <DialogHeader>
             <DialogTitle>Convidar novo usuário</DialogTitle>
             <DialogDescription>
-              O convidado receberá um link único para definir a própria senha. O link expira em 7 dias.
+              O convidado receberá um link único para definir a própria senha. O link expira em 7
+              dias.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div>
               <Label>E-mail *</Label>
-              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
             </div>
             <div>
               <Label>Nome (opcional)</Label>
@@ -939,7 +1048,9 @@ function ConvitesTab() {
             <div>
               <Label>Papel</Label>
               <Select value={papel} onValueChange={(v: any) => setPapel(v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="consultor">Consultor</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
@@ -948,7 +1059,9 @@ function ConvitesTab() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setOpenNovo(false)}>Cancelar</Button>
+            <Button variant="ghost" onClick={() => setOpenNovo(false)}>
+              Cancelar
+            </Button>
             <Button disabled={!email || mCriar.isPending} onClick={() => mCriar.mutate()}>
               <Send className="h-4 w-4 mr-1" />
               {mCriar.isPending ? "Gerando…" : "Gerar convite"}
@@ -963,8 +1076,8 @@ function ConvitesTab() {
           <DialogHeader>
             <DialogTitle>Convite pronto</DialogTitle>
             <DialogDescription>
-              Envie este link para <strong>{linkGerado?.email}</strong>. O link é único e expira em 7 dias.
-              Ele será invalidado automaticamente se o convite for reenviado ou revogado.
+              Envie este link para <strong>{linkGerado?.email}</strong>. O link é único e expira em
+              7 dias. Ele será invalidado automaticamente se o convite for reenviado ou revogado.
             </DialogDescription>
           </DialogHeader>
           <div className="rounded-md border bg-muted/40 p-3 text-xs font-mono break-all">
@@ -991,9 +1104,16 @@ function ConvitesTab() {
               <div className="space-y-2 text-sm">
                 <p>Ao confirmar:</p>
                 <ul className="list-disc pl-5 space-y-1">
-                  <li>O link enviado deixa de funcionar <strong>imediatamente</strong>.</li>
-                  <li>O convidado <strong>não poderá</strong> mais definir senha nem acessar o sistema por este convite.</li>
-                  <li>O convite ficará registrado no histórico como <em>revogado</em>.</li>
+                  <li>
+                    O link enviado deixa de funcionar <strong>imediatamente</strong>.
+                  </li>
+                  <li>
+                    O convidado <strong>não poderá</strong> mais definir senha nem acessar o sistema
+                    por este convite.
+                  </li>
+                  <li>
+                    O convite ficará registrado no histórico como <em>revogado</em>.
+                  </li>
                   <li>Você pode gerar um novo convite para o mesmo e-mail depois.</li>
                 </ul>
               </div>
@@ -1039,17 +1159,25 @@ function LogTab() {
           <div>
             <Label>Filtrar por ação</Label>
             <Select value={filtroAcao} onValueChange={setFiltroAcao}>
-              <SelectTrigger className="w-full sm:w-[240px]"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-full sm:w-[240px]">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="todas">Todas</SelectItem>
                 {Object.entries(ACAO_LABEL).map(([k, v]) => (
-                  <SelectItem key={k} value={k}>{v}</SelectItem>
+                  <SelectItem key={k} value={k}>
+                    {v}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-          {q.isLoading ? <p>Carregando…</p> : logs.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-6">Nenhum registro encontrado.</p>
+          {q.isLoading ? (
+            <p>Carregando…</p>
+          ) : logs.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">
+              Nenhum registro encontrado.
+            </p>
           ) : (
             <ul className="divide-y">
               {logs.map((l) => {
@@ -1069,7 +1197,6 @@ function LogTab() {
                 );
               })}
             </ul>
->>>>>>> 1b78db33cd458632241ee46c1aee77bd182e17de
           )}
         </CardContent>
       </Card>

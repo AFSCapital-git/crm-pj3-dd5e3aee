@@ -36,17 +36,24 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-<<<<<<< HEAD
-import { CheckCircle2, Plus, Trash2, Mail } from "lucide-react";
-import { getProjeto, listInteracoesPaginado } from "@/lib/projetos.functions";
-=======
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  CheckCircle2, Plus, Trash2, Mail, MessageSquare, StickyNote,
-  Phone, Users, FileText, RefreshCw, FilePlus2, MessageSquarePlus, Loader2, Inbox,
+  CheckCircle2,
+  Plus,
+  Trash2,
+  Mail,
+  MessageSquare,
+  StickyNote,
+  Phone,
+  Users,
+  FileText,
+  RefreshCw,
+  FilePlus2,
+  MessageSquarePlus,
+  Loader2,
+  Inbox,
 } from "lucide-react";
 import { getProjeto, getProjetoTimeline } from "@/lib/projetos.functions";
->>>>>>> 1b78db33cd458632241ee46c1aee77bd182e17de
 import { upsertMarco, marcarEntregue, deleteMarco, createInteracao } from "@/lib/marcos.functions";
 import {
   UrgencyBadge,
@@ -74,43 +81,27 @@ function ProjetoDetail() {
   const upsert = useServerFn(upsertMarco);
   const marcar = useServerFn(marcarEntregue);
   const del = useServerFn(deleteMarco);
-<<<<<<< HEAD
-  const criarNota = useServerFn(createInteracao);
-  const listInteracoes = useServerFn(listInteracoesPaginado);
-
-  const [openMarco, setOpenMarco] = useState(false);
-  const [nota, setNota] = useState("");
-  const [interacaoCursor, setInteracaoCursor] = useState<string | null>(null);
-
-  const qInteracoes = useQuery({
-    queryKey: ["projeto-interacoes", id, interacaoCursor],
-    queryFn: () =>
-      listInteracoes({ data: { projeto_id: id, cursor: interacaoCursor, pageSize: 20 } }),
-    enabled: !!id,
-  });
-=======
 
   const [openMarco, setOpenMarco] = useState(false);
   const [openInteracao, setOpenInteracao] = useState(false);
   const [tab, setTab] = useState("dados");
->>>>>>> 1b78db33cd458632241ee46c1aee77bd182e17de
 
   const mUpsertMarco = useMutation({
-    mutationFn: (v: Record<string, unknown>) => upsert({ data: v }),
+    mutationFn: (v: any) => upsert({ data: v }),
     onSuccess: () => {
       toast.success("Marco salvo");
       qc.invalidateQueries({ queryKey: ["projeto", id] });
       setOpenMarco(false);
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: any) => toast.error(e.message),
   });
   const mMarcar = useMutation({
-    mutationFn: (v: Record<string, unknown>) => marcar({ data: v }),
+    mutationFn: (v: any) => marcar({ data: v }),
     onSuccess: () => {
       toast.success("Marco entregue");
       qc.invalidateQueries({ queryKey: ["projeto", id] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: any) => toast.error(e.message),
   });
   const mDelMarco = useMutation({
     mutationFn: (mid: string) => del({ data: { id: mid } }),
@@ -119,17 +110,6 @@ function ProjetoDetail() {
       qc.invalidateQueries({ queryKey: ["projeto", id] });
     },
   });
-<<<<<<< HEAD
-  const mNota = useMutation({
-    mutationFn: () => criarNota({ data: { projeto_id: id, tipo: "nota", descricao: nota } }),
-    onSuccess: () => {
-      setNota("");
-      qc.invalidateQueries({ queryKey: ["projeto", id] });
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-=======
->>>>>>> 1b78db33cd458632241ee46c1aee77bd182e17de
 
   if (q.isLoading) return <p>Carregando…</p>;
   if (!q.data) return <p className="text-muted-foreground">Projeto não encontrado.</p>;
@@ -191,7 +171,7 @@ function ProjetoDetail() {
                   </DialogHeader>
                   <MarcoForm
                     projetoId={id}
-                    onSubmit={(v: Record<string, unknown>) => mUpsertMarco.mutate(v)}
+                    onSubmit={(v: any) => mUpsertMarco.mutate(v)}
                     loading={mUpsertMarco.isPending}
                   />
                 </DialogContent>
@@ -202,11 +182,8 @@ function ProjetoDetail() {
                 <p className="text-sm text-muted-foreground">Nenhum marco cadastrado.</p>
               ) : (
                 <div className="divide-y">
-                  {marcos.map((m: Record<string, unknown>) => (
-                    <div
-                      key={m.id as string}
-                      className="py-3 flex items-center justify-between gap-4"
-                    >
+                  {marcos.map((m: any) => (
+                    <div key={m.id} className="py-3 flex items-center justify-between gap-4">
                       <div className="min-w-0">
                         <p className="font-medium">{tipoMarcoLabel(m.tipo)}</p>
                         <p className="text-xs text-muted-foreground">
@@ -250,62 +227,7 @@ function ProjetoDetail() {
         </TabsContent>
 
         <TabsContent value="timeline">
-<<<<<<< HEAD
-          <Card>
-            <CardHeader>
-              <CardTitle>Linha do tempo</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-2">
-                <Textarea
-                  placeholder="Adicionar nota / registrar interação..."
-                  value={nota}
-                  onChange={(e) => setNota(e.target.value)}
-                />
-                <Button
-                  onClick={() => nota && mNota.mutate()}
-                  disabled={mNota.isPending || !nota}
-                  className="shrink-0"
-                >
-                  Adicionar
-                </Button>
-              </div>
-              <div className="space-y-3">
-                {qInteracoes.data?.items?.map((i: Record<string, unknown>) => (
-                  <div key={i.id as string} className="border-l-2 border-primary/40 pl-4 py-1">
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Badge
-                        variant={i.tipo === "email_encaminhado" ? "secondary" : "outline"}
-                        className="flex items-center gap-1"
-                      >
-                        {i.tipo === "email_encaminhado" && <Mail className="h-3 w-3" />}
-                        {tipoInteracaoLabel(i.tipo)}
-                      </Badge>
-                      <span>{new Date(i.data_hora).toLocaleString("pt-BR")}</span>
-                      {i.autor?.nome && <span>· {i.autor.nome}</span>}
-                    </div>
-                    <p className="text-sm mt-1">{i.descricao}</p>
-                  </div>
-                ))}
-                {!qInteracoes.data?.items?.length && !qInteracoes.isLoading && (
-                  <p className="text-sm text-muted-foreground">Sem interações ainda.</p>
-                )}
-              </div>
-              {qInteracoes.data?.hasMore && (
-                <Button
-                  variant="outline"
-                  onClick={() => setInteracaoCursor(qInteracoes.data.nextCursor)}
-                  disabled={qInteracoes.isLoading}
-                  className="w-full"
-                >
-                  {qInteracoes.isLoading ? "Carregando..." : "Carregar mais"}
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-=======
           <TimelineSection projetoId={id} />
->>>>>>> 1b78db33cd458632241ee46c1aee77bd182e17de
         </TabsContent>
 
         <TabsContent value="ia">
@@ -326,10 +248,15 @@ function ProjetoDetail() {
           </Button>
         </DialogTrigger>
         <DialogContent>
-          <DialogHeader><DialogTitle>Nova interação</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Nova interação</DialogTitle>
+          </DialogHeader>
           <InteracaoForm
             projetoId={id}
-            onSaved={() => { setOpenInteracao(false); setTab("timeline"); }}
+            onSaved={() => {
+              setOpenInteracao(false);
+              setTab("timeline");
+            }}
           />
         </DialogContent>
       </Dialog>
@@ -346,7 +273,9 @@ function TimelineSection({ projetoId }: { projetoId: string }) {
 
   return (
     <Card>
-      <CardHeader><CardTitle>Linha do tempo</CardTitle></CardHeader>
+      <CardHeader>
+        <CardTitle>Linha do tempo</CardTitle>
+      </CardHeader>
       <CardContent>
         {q.isLoading ? (
           <div className="space-y-4">
@@ -363,7 +292,10 @@ function TimelineSection({ projetoId }: { projetoId: string }) {
           </div>
         ) : q.isError ? (
           <div className="text-sm text-destructive">
-            Falha ao carregar a linha do tempo. <Button variant="link" className="p-0 h-auto" onClick={() => q.refetch()}>Tentar novamente</Button>
+            Falha ao carregar a linha do tempo.{" "}
+            <Button variant="link" className="p-0 h-auto" onClick={() => q.refetch()}>
+              Tentar novamente
+            </Button>
           </div>
         ) : (q.data ?? []).length === 0 ? (
           <div className="flex flex-col items-center justify-center text-center py-12 border border-dashed rounded-lg">
@@ -372,7 +304,8 @@ function TimelineSection({ projetoId }: { projetoId: string }) {
             </div>
             <p className="font-medium">Nenhuma interação ainda</p>
             <p className="text-sm text-muted-foreground mt-1">
-              Registre a primeira usando o botão <span className="font-medium">"Registrar interação"</span> no canto da tela.
+              Registre a primeira usando o botão{" "}
+              <span className="font-medium">"Registrar interação"</span> no canto da tela.
             </p>
           </div>
         ) : (
@@ -423,21 +356,53 @@ function interacaoStyle(tipo: string): InteracaoStyle {
   switch (tipo) {
     case "email":
     case "email_encaminhado":
-      return { icon: Mail, dot: "bg-sky-500 text-white", badge: "bg-sky-100 text-sky-900 dark:bg-sky-950 dark:text-sky-100" };
+      return {
+        icon: Mail,
+        dot: "bg-sky-500 text-white",
+        badge: "bg-sky-100 text-sky-900 dark:bg-sky-950 dark:text-sky-100",
+      };
     case "documento":
-      return { icon: FilePlus2, dot: "bg-violet-500 text-white", badge: "bg-violet-100 text-violet-900 dark:bg-violet-950 dark:text-violet-100" };
+      return {
+        icon: FilePlus2,
+        dot: "bg-violet-500 text-white",
+        badge: "bg-violet-100 text-violet-900 dark:bg-violet-950 dark:text-violet-100",
+      };
     case "alteracao_cronograma":
-      return { icon: RefreshCw, dot: "bg-amber-500 text-white", badge: "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-100" };
+      return {
+        icon: RefreshCw,
+        dot: "bg-amber-500 text-white",
+        badge: "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-100",
+      };
     case "aditivo_contratual":
-      return { icon: FileText, dot: "bg-orange-500 text-white", badge: "bg-orange-100 text-orange-900 dark:bg-orange-950 dark:text-orange-100" };
+      return {
+        icon: FileText,
+        dot: "bg-orange-500 text-white",
+        badge: "bg-orange-100 text-orange-900 dark:bg-orange-950 dark:text-orange-100",
+      };
     case "reuniao":
-      return { icon: Users, dot: "bg-emerald-500 text-white", badge: "bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-100" };
+      return {
+        icon: Users,
+        dot: "bg-emerald-500 text-white",
+        badge: "bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-100",
+      };
     case "ligacao":
-      return { icon: Phone, dot: "bg-teal-500 text-white", badge: "bg-teal-100 text-teal-900 dark:bg-teal-950 dark:text-teal-100" };
+      return {
+        icon: Phone,
+        dot: "bg-teal-500 text-white",
+        badge: "bg-teal-100 text-teal-900 dark:bg-teal-950 dark:text-teal-100",
+      };
     case "nota":
-      return { icon: StickyNote, dot: "bg-primary text-primary-foreground", badge: "bg-primary/10 text-primary" };
+      return {
+        icon: StickyNote,
+        dot: "bg-primary text-primary-foreground",
+        badge: "bg-primary/10 text-primary",
+      };
     default:
-      return { icon: MessageSquare, dot: "bg-muted-foreground text-background", badge: "bg-muted text-foreground" };
+      return {
+        icon: MessageSquare,
+        dot: "bg-muted-foreground text-background",
+        badge: "bg-muted text-foreground",
+      };
   }
 }
 
@@ -448,7 +413,8 @@ function InteracaoForm({ projetoId, onSaved }: { projetoId: string; onSaved: () 
   const [descricao, setDescricao] = useState("");
 
   const m = useMutation({
-    mutationFn: () => criarInteracao({ data: { projeto_id: projetoId, tipo: tipo as any, descricao } }),
+    mutationFn: () =>
+      criarInteracao({ data: { projeto_id: projetoId, tipo: tipo as any, descricao } }),
     onSuccess: () => {
       toast.success("Interação registrada");
       qc.invalidateQueries({ queryKey: ["projeto-timeline", projetoId] });
@@ -461,13 +427,18 @@ function InteracaoForm({ projetoId, onSaved }: { projetoId: string; onSaved: () 
 
   return (
     <form
-      onSubmit={(e) => { e.preventDefault(); if (descricao.trim()) m.mutate(); }}
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (descricao.trim()) m.mutate();
+      }}
       className="space-y-3"
     >
       <div>
         <Label>Tipo</Label>
         <Select value={tipo} onValueChange={setTipo}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="nota">Nota</SelectItem>
             <SelectItem value="reuniao">Reunião</SelectItem>
@@ -490,13 +461,18 @@ function InteracaoForm({ projetoId, onSaved }: { projetoId: string; onSaved: () 
       </div>
       <DialogFooter>
         <Button type="submit" disabled={m.isPending || !descricao.trim()}>
-          {m.isPending ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando…</>) : "Registrar"}
+          {m.isPending ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando…
+            </>
+          ) : (
+            "Registrar"
+          )}
         </Button>
       </DialogFooter>
     </form>
   );
 }
-
 
 function Info({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -507,15 +483,7 @@ function Info({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-function MarcoForm({
-  projetoId,
-  onSubmit,
-  loading,
-}: {
-  projetoId: string;
-  onSubmit: (v: Record<string, unknown>) => void;
-  loading: boolean;
-}) {
+function MarcoForm({ projetoId, onSubmit, loading }: any) {
   const [v, setV] = useState({
     projeto_id: projetoId,
     tipo: "relatorio_tecnico",
@@ -533,7 +501,7 @@ function MarcoForm({
     >
       <div>
         <Label>Tipo</Label>
-        <Select value={v.tipo} onValueChange={(x: string) => setV({ ...v, tipo: x })}>
+        <Select value={v.tipo} onValueChange={(x) => setV({ ...v, tipo: x as any })}>
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
@@ -571,7 +539,7 @@ function MarcarEntregueDialog({
   marco,
   onConfirm,
 }: {
-  marco: Record<string, unknown>;
+  marco: any;
   onConfirm: (dt: string) => void;
 }) {
   const [dt, setDt] = useState(new Date().toISOString().slice(0, 10));

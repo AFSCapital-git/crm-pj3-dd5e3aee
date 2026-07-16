@@ -33,13 +33,6 @@ import {
 } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-<<<<<<< HEAD
-import { Plus, Pencil, Trash2, ChevronDown } from "lucide-react";
-import { upsertEdital, deleteEdital } from "@/lib/editais.functions";
-import { categoriaEditalLabel, formatBRL, formatDate } from "@/lib/labels";
-import { listEditaisPaginado } from "@/lib/pagination.functions";
-import { usePaginatedQuery } from "@/hooks/use-paginated-query";
-=======
 import { Plus, Pencil, Trash2, FileSearch, AlertTriangle } from "lucide-react";
 import { listEditais, upsertEdital, deleteEdital, setEditalAtivo } from "@/lib/editais.functions";
 import { categoriaEditalLabel, formatBRL, formatDate } from "@/lib/labels";
@@ -54,7 +47,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
->>>>>>> 1b78db33cd458632241ee46c1aee77bd182e17de
 
 export const Route = createFileRoute("/_authenticated/editais")({
   component: EditaisPage,
@@ -84,7 +76,11 @@ function PrazoBadge({ prazo }: { prazo: string | null }) {
   const dias = diasParaPrazo(prazo);
   if (dias === null) return null;
   if (dias < 0)
-    return <Badge className="bg-urgency-overdue text-urgency-overdue-fg border-transparent">Encerrado</Badge>;
+    return (
+      <Badge className="bg-urgency-overdue text-urgency-overdue-fg border-transparent">
+        Encerrado
+      </Badge>
+    );
   if (dias <= 7)
     return (
       <Badge className="bg-urgency-critical text-urgency-critical-fg border-transparent gap-1">
@@ -92,36 +88,26 @@ function PrazoBadge({ prazo }: { prazo: string | null }) {
       </Badge>
     );
   if (dias <= 15)
-    return <Badge className="bg-urgency-warning text-urgency-warning-fg border-transparent">≤ 15 dias</Badge>;
+    return (
+      <Badge className="bg-urgency-warning text-urgency-warning-fg border-transparent">
+        ≤ 15 dias
+      </Badge>
+    );
   if (dias <= 30)
-    return <Badge className="bg-urgency-notice text-urgency-notice-fg border-transparent">≤ 30 dias</Badge>;
+    return (
+      <Badge className="bg-urgency-notice text-urgency-notice-fg border-transparent">
+        ≤ 30 dias
+      </Badge>
+    );
   return <Badge className="bg-urgency-ok text-urgency-ok-fg border-transparent">Aberto</Badge>;
 }
 
 function EditaisPage() {
-  const listFn = useServerFn(listEditaisPaginado);
+  const list = useServerFn(listEditais);
   const upsert = useServerFn(upsertEdital);
   const del = useServerFn(deleteEdital);
   const setAtivo = useServerFn(setEditalAtivo);
   const qc = useQueryClient();
-<<<<<<< HEAD
-  const { items, loadMore, hasMore, isLoadingMore, isLoading, error } = usePaginatedQuery(
-    ["editais-paginated"],
-    (cursor) => listFn({ data: { cursor, pageSize: 50 } }),
-  );
-  const [editing, setEditing] = useState<Record<string, unknown> | null>(null);
-  const [open, setOpen] = useState(false);
-
-  const mUpsert = useMutation({
-    mutationFn: (input: Record<string, unknown>) => upsert({ data: input }),
-    onSuccess: () => {
-      toast.success("Edital salvo");
-      qc.invalidateQueries({ queryKey: ["editais-paginated"] });
-      setOpen(false);
-      setEditing(null);
-    },
-    onError: (e: Error) => toast.error(e.message),
-=======
   const q = useQuery({ queryKey: ["editais"], queryFn: () => list() });
   const [editing, setEditing] = useState<EditalRow | null>(null);
   const [open, setOpen] = useState(false);
@@ -135,17 +121,11 @@ function EditaisPage() {
       setEditing(null);
     },
     onError: (e: any) => toast.error(e.message),
->>>>>>> 1b78db33cd458632241ee46c1aee77bd182e17de
   });
   const mDelete = useMutation({
     mutationFn: (id: string) => del({ data: { id } }),
     onSuccess: () => {
       toast.success("Removido");
-<<<<<<< HEAD
-      qc.invalidateQueries({ queryKey: ["editais-paginated"] });
-    },
-    onError: (e: Error) => toast.error(e.message),
-=======
       qc.invalidateQueries({ queryKey: ["editais"] });
     },
     onError: (e: any) => toast.error(e.message),
@@ -157,7 +137,6 @@ function EditaisPage() {
       qc.invalidateQueries({ queryKey: ["editais"] });
     },
     onError: (e: any) => toast.error(e.message),
->>>>>>> 1b78db33cd458632241ee46c1aee77bd182e17de
   });
 
   const rows = (q.data ?? []) as EditalRow[];
@@ -169,7 +148,6 @@ function EditaisPage() {
           <h1 className="truncate text-2xl font-semibold tracking-tight">Editais FINEP</h1>
           <p className="text-sm text-muted-foreground">Catálogo de linhas de financiamento.</p>
         </div>
-<<<<<<< HEAD
         <Dialog
           open={open}
           onOpenChange={(o) => {
@@ -178,15 +156,10 @@ function EditaisPage() {
           }}
         >
           <DialogTrigger asChild>
-            <Button>
+            <Button className="shrink-0">
               <Plus className="mr-2 h-4 w-4" />
               Novo edital
             </Button>
-=======
-        <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setEditing(null); }}>
-          <DialogTrigger asChild>
-            <Button className="shrink-0"><Plus className="mr-2 h-4 w-4" />Novo edital</Button>
->>>>>>> 1b78db33cd458632241ee46c1aee77bd182e17de
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
@@ -194,33 +167,19 @@ function EditaisPage() {
             </DialogHeader>
             <EditalForm
               initial={editing}
-              onSubmit={(v: Record<string, unknown>) =>
-                mUpsert.mutate({ id: editing?.id, values: v })
-              }
+              onSubmit={(v: any) => mUpsert.mutate({ id: editing?.id, values: v })}
               loading={mUpsert.isPending}
             />
           </DialogContent>
         </Dialog>
       </div>
 
-<<<<<<< HEAD
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            Catálogo{" "}
-            {items.length > 0 && <span className="text-sm font-normal">({items.length})</span>}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {isLoading ? (
-            <p>Carregando…</p>
-          ) : error ? (
-            <p className="text-destructive">{error.message}</p>
-          ) : (
-            <>
-=======
       {q.isLoading ? (
-        <Card><CardContent className="pt-6"><p>Carregando…</p></CardContent></Card>
+        <Card>
+          <CardContent className="pt-6">
+            <p>Carregando…</p>
+          </CardContent>
+        </Card>
       ) : rows.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
@@ -229,9 +188,16 @@ function EditaisPage() {
             </div>
             <div>
               <p className="font-medium">Nenhum item cadastrado ainda</p>
-              <p className="text-sm text-muted-foreground">Cadastre o primeiro edital do catálogo para começar.</p>
+              <p className="text-sm text-muted-foreground">
+                Cadastre o primeiro edital do catálogo para começar.
+              </p>
             </div>
-            <Button onClick={() => { setEditing(null); setOpen(true); }}>
+            <Button
+              onClick={() => {
+                setEditing(null);
+                setOpen(true);
+              }}
+            >
               <Plus className="mr-2 h-4 w-4" /> Cadastrar primeiro edital
             </Button>
           </CardContent>
@@ -241,7 +207,6 @@ function EditaisPage() {
           {/* Desktop: table */}
           <Card className="hidden md:block">
             <CardContent className="pt-6">
->>>>>>> 1b78db33cd458632241ee46c1aee77bd182e17de
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -255,73 +220,6 @@ function EditaisPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-<<<<<<< HEAD
-                  {items.map((e: Record<string, unknown>) => {
-                    const aberto = e.prazo_submissao && e.prazo_submissao >= today;
-                    return (
-                      <TableRow key={e.id as string}>
-                        <TableCell className="font-medium">{e.nome}</TableCell>
-                        <TableCell>{categoriaEditalLabel(e.categoria)}</TableCell>
-                        <TableCell>{e.orgao ?? "—"}</TableCell>
-                        <TableCell>{formatBRL(e.valor_maximo_edital)}</TableCell>
-                        <TableCell>
-                          {formatDate(e.prazo_submissao)}
-                          {aberto && (
-                            <Badge className="ml-2 bg-urgency-ok text-urgency-ok-fg border-transparent">
-                              Aberto
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>{e.ativo ? "Sim" : "Não"}</TableCell>
-                        <TableCell className="text-right space-x-1">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => {
-                              setEditing(e);
-                              setOpen(true);
-                            }}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => confirm("Remover?") && mDelete.mutate(e.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                  {items.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground">
-                        Nenhum edital cadastrado.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-              {hasMore && (
-                <div className="flex justify-center pt-4">
-                  <Button
-                    onClick={() => loadMore()}
-                    disabled={isLoadingMore}
-                    variant="outline"
-                    className="w-full"
-                  >
-                    {isLoadingMore ? "Carregando…" : "Carregar mais"}
-                    <ChevronDown className="ml-2 h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-            </>
-          )}
-        </CardContent>
-      </Card>
-=======
                   {rows.map((e) => (
                     <TableRow key={e.id}>
                       <TableCell className="font-medium">{e.nome}</TableCell>
@@ -342,11 +240,20 @@ function EditaisPage() {
                             onCheckedChange={(v) => mToggle.mutate({ id: e.id, ativo: v })}
                             aria-label={e.ativo ? "Inativar edital" : "Ativar edital"}
                           />
-                          <span className="text-xs text-muted-foreground">{e.ativo ? "Ativo" : "Inativo"}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {e.ativo ? "Ativo" : "Inativo"}
+                          </span>
                         </div>
                       </TableCell>
                       <TableCell className="text-right space-x-1">
-                        <Button size="icon" variant="ghost" onClick={() => { setEditing(e); setOpen(true); }}>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => {
+                            setEditing(e);
+                            setOpen(true);
+                          }}
+                        >
                           <Pencil className="h-4 w-4" />
                         </Button>
                         <RemoveButton onConfirm={() => mDelete.mutate(e.id)} nome={e.nome} />
@@ -389,10 +296,19 @@ function EditaisPage() {
                         disabled={mToggle.isPending}
                         onCheckedChange={(v) => mToggle.mutate({ id: e.id, ativo: v })}
                       />
-                      <span className="text-xs text-muted-foreground">{e.ativo ? "Ativo" : "Inativo"}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {e.ativo ? "Ativo" : "Inativo"}
+                      </span>
                     </div>
                     <div className="flex gap-1">
-                      <Button size="icon" variant="ghost" onClick={() => { setEditing(e); setOpen(true); }}>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => {
+                          setEditing(e);
+                          setOpen(true);
+                        }}
+                      >
                         <Pencil className="h-4 w-4" />
                       </Button>
                       <RemoveButton onConfirm={() => mDelete.mutate(e.id)} nome={e.nome} />
@@ -404,33 +320,24 @@ function EditaisPage() {
           </div>
         </>
       )}
->>>>>>> 1b78db33cd458632241ee46c1aee77bd182e17de
     </div>
   );
 }
 
-<<<<<<< HEAD
-function EditalForm({
-  initial,
-  onSubmit,
-  loading,
-}: {
-  initial: Record<string, unknown> | null;
-  onSubmit: (values: Record<string, unknown>) => void;
-  loading: boolean;
-}) {
-=======
 function RemoveButton({ onConfirm, nome }: { onConfirm: () => void; nome: string }) {
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button size="icon" variant="ghost"><Trash2 className="h-4 w-4" /></Button>
+        <Button size="icon" variant="ghost">
+          <Trash2 className="h-4 w-4" />
+        </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Remover edital?</AlertDialogTitle>
           <AlertDialogDescription>
-            "{nome}" será removido do catálogo. Projetos existentes que já referenciam este edital são mantidos.
+            "{nome}" será removido do catálogo. Projetos existentes que já referenciam este edital
+            são mantidos.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -443,15 +350,14 @@ function RemoveButton({ onConfirm, nome }: { onConfirm: () => void; nome: string
 }
 
 function EditalForm({ initial, onSubmit, loading }: any) {
->>>>>>> 1b78db33cd458632241ee46c1aee77bd182e17de
   const [v, setV] = useState({
-    nome: (initial?.nome as string) ?? "",
-    categoria: (initial?.categoria as string) ?? "subvencao_economica",
-    orgao: (initial?.orgao as string) ?? "FINEP",
+    nome: initial?.nome ?? "",
+    categoria: initial?.categoria ?? "subvencao_economica",
+    orgao: initial?.orgao ?? "FINEP",
     valor_maximo_edital: initial?.valor_maximo_edital ?? null,
-    prazo_submissao: (initial?.prazo_submissao as string) ?? "",
-    requisitos_elegibilidade: (initial?.requisitos_elegibilidade as string) ?? "",
-    ativo: (initial?.ativo as boolean) ?? true,
+    prazo_submissao: initial?.prazo_submissao ?? "",
+    requisitos_elegibilidade: initial?.requisitos_elegibilidade ?? "",
+    ativo: initial?.ativo ?? true,
   });
   return (
     <form
@@ -472,7 +378,7 @@ function EditalForm({ initial, onSubmit, loading }: any) {
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label>Categoria</Label>
-          <Select value={v.categoria} onValueChange={(x: string) => setV({ ...v, categoria: x })}>
+          <Select value={v.categoria} onValueChange={(x) => setV({ ...v, categoria: x as any })}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -496,7 +402,7 @@ function EditalForm({ initial, onSubmit, loading }: any) {
             type="number"
             step="0.01"
             value={v.valor_maximo_edital ?? ""}
-            onChange={(e) => setV({ ...v, valor_maximo_edital: e.target.value })}
+            onChange={(e) => setV({ ...v, valor_maximo_edital: e.target.value as any })}
           />
         </div>
         <div>

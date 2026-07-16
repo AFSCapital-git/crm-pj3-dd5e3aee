@@ -27,7 +27,13 @@ function AcceptInvitePage() {
   const [state, setState] = useState<
     | { kind: "loading" }
     | { kind: "invalid"; motivo: string }
-    | { kind: "form"; email: string; papel: string; nome_sugerido: string | null; expira_em: string }
+    | {
+        kind: "form";
+        email: string;
+        papel: string;
+        nome_sugerido: string | null;
+        expira_em: string;
+      }
     | { kind: "done"; email: string }
   >({ kind: "loading" });
 
@@ -101,9 +107,12 @@ function AcceptInvitePage() {
               <CheckCircle2 className="mx-auto h-12 w-12 text-primary" />
               <p className="font-medium">Cadastro concluído!</p>
               <p className="text-sm text-muted-foreground">
-                Sua conta foi criada com o e-mail <strong>{state.email}</strong>. Faça login para continuar.
+                Sua conta foi criada com o e-mail <strong>{state.email}</strong>. Faça login para
+                continuar.
               </p>
-              <Button asChild className="w-full mt-2"><a href="/auth">Ir para login</a></Button>
+              <Button asChild className="w-full mt-2">
+                <a href="/auth">Ir para login</a>
+              </Button>
             </div>
           )}
           {state.kind === "form" && (
@@ -111,7 +120,9 @@ function AcceptInvitePage() {
               <div className="rounded-md border bg-muted/40 p-3 text-sm space-y-1">
                 <div className="flex items-center gap-2">
                   <MailCheck className="h-4 w-4 text-primary" />
-                  <span>Convidando <strong>{state.email}</strong></span>
+                  <span>
+                    Convidando <strong>{state.email}</strong>
+                  </span>
                 </div>
                 <div className="text-xs text-muted-foreground">
                   Papel: <strong className="uppercase">{state.papel}</strong> · válido até{" "}
@@ -124,12 +135,28 @@ function AcceptInvitePage() {
               </div>
               <div>
                 <Label htmlFor="senha">Defina sua senha</Label>
-                <Input id="senha" type="password" value={senha} onChange={(e) => setSenha(e.target.value)} required minLength={8} />
-                <p className="text-xs text-muted-foreground mt-1">Mínimo 8 caracteres. Evite senhas comuns.</p>
+                <Input
+                  id="senha"
+                  type="password"
+                  value={senha}
+                  onChange={(e) => setSenha(e.target.value)}
+                  required
+                  minLength={8}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Mínimo 8 caracteres. Evite senhas comuns.
+                </p>
               </div>
               <div>
                 <Label htmlFor="senha2">Confirme a senha</Label>
-                <Input id="senha2" type="password" value={senha2} onChange={(e) => setSenha2(e.target.value)} required minLength={8} />
+                <Input
+                  id="senha2"
+                  type="password"
+                  value={senha2}
+                  onChange={(e) => setSenha2(e.target.value)}
+                  required
+                  minLength={8}
+                />
               </div>
               <Button type="submit" disabled={submitting} className="w-full">
                 {submitting ? "Concluindo…" : "Aceitar convite e criar conta"}

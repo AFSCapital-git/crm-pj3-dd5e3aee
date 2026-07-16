@@ -36,7 +36,9 @@ export const listConvites = createServerFn({ method: "GET" })
     await assertAdmin(context.supabase, context.userId);
     const { data, error } = await context.supabase
       .from("convites")
-      .select("id,email_convidado,papel_designado,nome_sugerido,status,data_expiracao,criado_em,aceito_em,convidado_por,usuario_criado_id")
+      .select(
+        "id,email_convidado,papel_designado,nome_sugerido,status,data_expiracao,criado_em,aceito_em,convidado_por,usuario_criado_id",
+      )
       .order("criado_em", { ascending: false });
     if (error) throw error;
     return data ?? [];
@@ -75,7 +77,9 @@ export const criarConvite = createServerFn({ method: "POST" })
       .eq("status", "pendente")
       .maybeSingle();
     if (pend) {
-      throw new Error("Já existe um convite pendente para esse e-mail. Reenvie ou revogue o convite existente.");
+      throw new Error(
+        "Já existe um convite pendente para esse e-mail. Reenvie ou revogue o convite existente.",
+      );
     }
 
     const token = newToken();
@@ -131,7 +135,12 @@ export const reenviarConvite = createServerFn({ method: "POST" })
 
     const { error: e2 } = await supabaseAdmin
       .from("convites")
-      .update({ token_hash, data_expiracao: expira, status: "pendente", updated_at: new Date().toISOString() })
+      .update({
+        token_hash,
+        data_expiracao: expira,
+        status: "pendente",
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", data.id);
     if (e2) throw e2;
 
@@ -152,7 +161,10 @@ export const revogarConvite = createServerFn({ method: "POST" })
     await assertAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: atual } = await supabaseAdmin
-      .from("convites").select("email_convidado,status").eq("id", data.id).maybeSingle();
+      .from("convites")
+      .select("email_convidado,status")
+      .eq("id", data.id)
+      .maybeSingle();
     if (!atual) throw new Error("Convite não encontrado.");
     if (atual.status === "aceito") throw new Error("Convite já foi aceito.");
 
@@ -285,21 +297,27 @@ export const alterarPapel = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const { data: rolesAtuais } = await supabaseAdmin
-      .from("user_roles").select("role").eq("user_id", data.user_id);
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", data.user_id);
     const antes = (rolesAtuais ?? []).map((r) => r.role).join(",");
 
     // Se está tirando admin, o trigger BEFORE DELETE valida "último admin".
     const { error: eDel } = await supabaseAdmin
-      .from("user_roles").delete().eq("user_id", data.user_id);
+      .from("user_roles")
+      .delete()
+      .eq("user_id", data.user_id);
     if (eDel) throw eDel;
 
     const { error: eIns } = await supabaseAdmin
-      .from("user_roles").insert({ user_id: data.user_id, role: data.papel });
+      .from("user_roles")
+      .insert({ user_id: data.user_id, role: data.papel });
     if (eIns) {
       // rollback best-effort: reinsere a role anterior
-      if (antes) await supabaseAdmin.from("user_roles").insert(
-        antes.split(",").map((r) => ({ user_id: data.user_id, role: r as any })),
-      );
+      if (antes)
+        await supabaseAdmin
+          .from("user_roles")
+          .insert(antes.split(",").map((r) => ({ user_id: data.user_id, role: r as any })));
       throw eIns;
     }
 
@@ -382,16 +400,18 @@ export const listLogAuditoria = createServerFn({ method: "POST" })
       if (l.usuario_que_executou) ids.add(l.usuario_que_executou);
       if (l.usuario_afetado) ids.add(l.usuario_afetado);
     }
-    let nomes: Record<string, string> = {};
+    const nomes: Record<string, string> = {};
     if (ids.size > 0) {
       const { data: us } = await context.supabase
-        .from("usuarios_internos").select("id,nome,email").in("id", [...ids]);
+        .from("usuarios_internos")
+        .select("id,nome,email")
+        .in("id", [...ids]);
       for (const u of us ?? []) nomes[u.id] = u.nome || u.email;
     }
     return (logs ?? []).map((l) => ({
       ...l,
-      executor_nome: l.usuario_que_executou ? nomes[l.usuario_que_executou] ?? "—" : "sistema",
-      afetado_nome: l.usuario_afetado ? nomes[l.usuario_afetado] ?? "—" : null,
+      executor_nome: l.usuario_que_executou ? (nomes[l.usuario_que_executou] ?? "—") : "sistema",
+      afetado_nome: l.usuario_afetado ? (nomes[l.usuario_afetado] ?? "—") : null,
     }));
   });
 
@@ -410,6 +430,9 @@ export const meuStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { data } = await context.supabase
-      .from("usuarios_internos").select("status").eq("id", context.userId).maybeSingle();
+      .from("usuarios_internos")
+      .select("status")
+      .eq("id", context.userId)
+      .maybeSingle();
     return { status: (data?.status as string | undefined) ?? "ativo" };
   });

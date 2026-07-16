@@ -68,9 +68,7 @@ export const deleteEdital = createServerFn({ method: "POST" })
 
 export const setEditalAtivo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
-    z.object({ id: z.string().uuid(), ativo: z.boolean() }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid(), ativo: z.boolean() }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: row, error } = await context.supabase
       .from("linhas_editais_finep")
