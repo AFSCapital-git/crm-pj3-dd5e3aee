@@ -316,7 +316,7 @@ function TarefasSection({
             <TarefaForm
               projetoId={projetoId}
               usuariosList={usuariosList}
-              onSubmit={(v: any) => mUpsert.mutate({ values: v })}
+              onSubmit={(v: any) => mUpsert.mutate(v)}
               loading={mUpsert.isPending}
             />
           </DialogContent>
