@@ -73,7 +73,7 @@ function Page() {
       )}
 
       <div className="space-y-3">
-        {q.data?.map((p: Record<string, unknown>) => (
+        {q.data?.map((p: any) => (
           <Card key={p.id as string}>
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
@@ -105,7 +105,7 @@ function Page() {
                     <SelectValue placeholder="Selecionar projeto…" />
                   </SelectTrigger>
                   <SelectContent>
-                    {projetos.data?.map((pr: Record<string, unknown>) => (
+                    {projetos.data?.map((pr: any) => (
                       <SelectItem key={pr.id as string} value={pr.id as string}>
                         [{pr.codigo_rastreio as string}] {pr.nome_projeto as string}
                       </SelectItem>

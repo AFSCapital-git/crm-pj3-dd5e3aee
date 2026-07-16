@@ -37,7 +37,7 @@ export const vincularEmailManual = createServerFn({ method: "POST" })
     const { data: row, error } = await context.supabase.rpc("vincular_email_manual", {
       _pendente_id: data.pendente_id,
       _projeto_id: data.projeto_id,
-    } as Record<string, unknown>);
+    });
     if (error) throw error;
     return row;
   });
@@ -66,7 +66,7 @@ export const simularReencaminhamento = createServerFn({ method: "POST" })
     const { data: isAdmin } = await context.supabase.rpc("has_role", {
       _user_id: context.userId,
       _role: "admin",
-    } as Record<string, unknown>);
+    });
     if (!isAdmin) throw new Error("Apenas administradores podem simular reencaminhamento");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -100,7 +100,7 @@ export const simularReencaminhamento = createServerFn({ method: "POST" })
       if (existing.data) return { status: "duplicate" as const, email_id: existing.data.id };
       const ins = await supabaseAdmin
         .from("emails_vinculados")
-        .insert(payload as Record<string, unknown>)
+        .insert(payload as any)
         .select("id")
         .maybeSingle();
       if (ins.error) {

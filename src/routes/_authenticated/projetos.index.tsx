@@ -67,14 +67,14 @@ function ProjetosPage() {
 
   const [open, setOpen] = useState(false);
   const mUpsert = useMutation({
-    mutationFn: (input: Record<string, unknown>) => upsert({ data: input }),
+    mutationFn: (input: any) => upsert({ data: input }),
     onSuccess: () => {
       toast.success("Projeto salvo");
       qc.invalidateQueries({ queryKey: ["projetos"] });
       setOpen(false);
     },
     onError: (e: unknown) => {
-      const error = e as Record<string, unknown>;
+      const error = e as any;
       toast.error(String(error?.message ?? "Erro ao salvar"));
     },
   });
@@ -116,7 +116,7 @@ function ProjetosPage() {
               <ProjetoForm
                 empresas={qEmp.data ?? []}
                 editais={qEd.data ?? []}
-                onSubmit={(v: Record<string, unknown>) => mUpsert.mutate({ values: v })}
+                onSubmit={(v: any) => mUpsert.mutate({ values: v })}
                 loading={mUpsert.isPending}
               />
             </DialogContent>
@@ -141,7 +141,7 @@ function ProjetosPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(q.data ?? []).map((p: Record<string, unknown>) => (
+                {(q.data ?? []).map((p: any) => (
                   <TableRow
                     key={p.id as string}
                     className="cursor-pointer"
@@ -157,10 +157,10 @@ function ProjetosPage() {
                       </Link>
                     </TableCell>
                     <TableCell>
-                      {(p.empresa as Record<string, unknown> | undefined)?.razao_social ?? "—"}
+                      {(p.empresa as any | undefined)?.razao_social ?? "—"}
                     </TableCell>
                     <TableCell>
-                      {(p.edital as Record<string, unknown> | undefined)?.nome ?? "—"}
+                      {(p.edital as any | undefined)?.nome ?? "—"}
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">{statusProjetoLabel(p.status as string)}</Badge>
@@ -186,11 +186,11 @@ function ProjetosPage() {
 }
 
 interface ProjetoFormProps {
-  empresas: Array<Record<string, unknown>>;
-  editais: Array<Record<string, unknown>>;
-  onSubmit: (v: Record<string, unknown>) => void;
+  empresas: Array<any>;
+  editais: Array<any>;
+  onSubmit: (v: any) => void;
   loading: boolean;
-  initial?: Record<string, unknown>;
+  initial?: any;
 }
 
 function ProjetoForm({ empresas, editais, onSubmit, loading, initial }: ProjetoFormProps) {

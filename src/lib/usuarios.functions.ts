@@ -19,7 +19,7 @@ export const deactivateUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ userId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.rpc("deactivate_user", {
+    const { error } = await context.supabase.rpc("deactivate_user" as any, {
       _user_id: data.userId,
     });
 
@@ -34,7 +34,7 @@ export const reactivateUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ userId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.rpc("reactivate_user", {
+    const { error } = await context.supabase.rpc("reactivate_user" as any, {
       _user_id: data.userId,
     });
 
