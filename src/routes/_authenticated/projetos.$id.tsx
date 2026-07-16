@@ -38,6 +38,14 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
   CheckCircle2,
   Plus,
   Trash2,
@@ -52,9 +60,14 @@ import {
   MessageSquarePlus,
   Loader2,
   Inbox,
+  Edit2,
 } from "lucide-react";
-import { getProjeto, getProjetoTimeline } from "@/lib/projetos.functions";
+import { getProjeto, getProjetoTimeline, listInteracoesPaginado, toggleInteracaoDestaque } from "@/lib/projetos.functions";
+import { listDiscussao, createMensagem, updateMensagem, deleteMensagem } from "@/lib/discussao.functions";
+import { listTarefas, upsertTarefa, concluirTarefa, deleteTarefa } from "@/lib/tarefas.functions";
 import { upsertMarco, marcarEntregue, deleteMarco, createInteracao } from "@/lib/marcos.functions";
+import { listUsuarios } from "@/lib/usuarios.functions";
+import { getCurrentUser } from "@/lib/auth.functions";
 import {
   UrgencyBadge,
   formatBRL,
@@ -62,6 +75,8 @@ import {
   statusProjetoLabel,
   tipoMarcoLabel,
   tipoInteracaoLabel,
+  statusTarefaLabel,
+  prioridadeTarefaLabel,
 } from "@/lib/labels";
 import { DocumentosTab } from "@/components/documentos-tab";
 import { EmailsTab } from "@/components/emails-tab";
@@ -72,11 +87,398 @@ export const Route = createFileRoute("/_authenticated/projetos/$id")({
   component: ProjetoDetail,
 });
 
+function DiscussaoSection({ projetoId, userId }: { projetoId: string; userId: string }) {
+  const fn = useServerFn(listDiscussao);
+  const fnCreate = useServerFn(createMensagem);
+  const fnUpdate = useServerFn(updateMensagem);
+  const fnDelete = useServerFn(deleteMensagem);
+  const qc = useQueryClient();
+
+  const q = useQuery({
+    queryKey: ["discussao", projetoId],
+    queryFn: () => fn({ data: { projeto_id: projetoId } }),
+    refetchInterval: 15000,
+  });
+
+  const [novaMsg, setNovaMsg] = useState("");
+  const [editandoId, setEditandoId] = useState<string | null>(null);
+  const [editandoTexto, setEditandoTexto] = useState("");
+
+  const mCreate = useMutation({
+    mutationFn: (msg: string) => fnCreate({ data: { projeto_id: projetoId, mensagem: msg } }),
+    onSuccess: () => {
+      toast.success("Mensagem enviada");
+      qc.invalidateQueries({ queryKey: ["discussao", projetoId] });
+      setNovaMsg("");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const mUpdate = useMutation({
+    mutationFn: (msg: string) => fnUpdate({ data: { id: editandoId!, mensagem: msg } }),
+    onSuccess: () => {
+      toast.success("Editado");
+      qc.invalidateQueries({ queryKey: ["discussao", projetoId] });
+      setEditandoId(null);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const mDelete = useMutation({
+    mutationFn: (id: string) => fnDelete({ data: { id } }),
+    onSuccess: () => {
+      toast.success("Removido");
+      qc.invalidateQueries({ queryKey: ["discussao", projetoId] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const handleEnviar = () => {
+    if (!novaMsg.trim()) return;
+    mCreate.mutate(novaMsg);
+  };
+
+  return (
+    <Card>
+      <CardContent className="pt-6 flex flex-col gap-4 max-h-[500px] overflow-y-auto">
+        {q.isLoading ? (
+          <p>Carregando…</p>
+        ) : (q.data ?? []).length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground">Nenhuma mensagem ainda</div>
+        ) : (
+          <div className="space-y-3">
+            {(q.data ?? []).map((m: any) => (
+              <div key={m.id} className="border rounded p-3 bg-muted/30">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-sm">{m.autor?.nome}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(m.created_at).toLocaleString("pt-BR")}
+                      </span>
+                      {m.editado_em && (
+                        <span className="text-xs text-muted-foreground italic">(editado)</span>
+                      )}
+                    </div>
+                    {editandoId === m.id ? (
+                      <textarea
+                        value={editandoTexto}
+                        onChange={(e) => setEditandoTexto(e.target.value)}
+                        className="mt-2 w-full border rounded p-2"
+                        rows={3}
+                      />
+                    ) : (
+                      <p className="text-sm mt-1 whitespace-pre-wrap">{m.mensagem}</p>
+                    )}
+                  </div>
+                  {m.autor_id === userId && (
+                    <div className="flex gap-1">
+                      {editandoId === m.id ? (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => mUpdate.mutate(editandoTexto)}
+                            disabled={mUpdate.isPending}
+                          >
+                            Salvar
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => setEditandoId(null)}>
+                            Cancelar
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setEditandoId(m.id);
+                              setEditandoTexto(m.mensagem);
+                            }}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => mDelete.mutate(m.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+      <div className="border-t p-4 flex gap-2">
+        <Input
+          placeholder="Digite sua mensagem…"
+          value={novaMsg}
+          onChange={(e) => setNovaMsg(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleEnviar()}
+          disabled={mCreate.isPending}
+        />
+        <Button onClick={handleEnviar} disabled={mCreate.isPending || !novaMsg.trim()}>
+          Enviar
+        </Button>
+      </div>
+    </Card>
+  );
+}
+
+function TarefasSection({
+  projetoId,
+  usuariosList,
+}: {
+  projetoId: string;
+  usuariosList: any[];
+}) {
+  const fn = useServerFn(listTarefas);
+  const fnUpsert = useServerFn(upsertTarefa);
+  const fnConcluir = useServerFn(concluirTarefa);
+  const fnDelete = useServerFn(deleteTarefa);
+  const qc = useQueryClient();
+
+  const q = useQuery({
+    queryKey: ["tarefas", projetoId],
+    queryFn: () => fn({ data: { projeto_id: projetoId } }),
+  });
+
+  const [open, setOpen] = useState(false);
+  const [filtroStatus, setFiltroStatus] = useState<string>("");
+
+  const mUpsert = useMutation({
+    mutationFn: (v: any) => fnUpsert({ data: v }),
+    onSuccess: () => {
+      toast.success("Tarefa salva");
+      qc.invalidateQueries({ queryKey: ["tarefas", projetoId] });
+      setOpen(false);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const mConcluir = useMutation({
+    mutationFn: (id: string) => fnConcluir({ data: { id } }),
+    onSuccess: () => {
+      toast.success("Tarefa concluída");
+      qc.invalidateQueries({ queryKey: ["tarefas", projetoId] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const mDelete = useMutation({
+    mutationFn: (id: string) => fnDelete({ data: { id } }),
+    onSuccess: () => {
+      toast.success("Removida");
+      qc.invalidateQueries({ queryKey: ["tarefas", projetoId] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const tarefas = q.data ?? [];
+  const filtradas = filtroStatus ? tarefas.filter((t: any) => t.status === filtroStatus) : tarefas;
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div className="flex items-center gap-2">
+          <CardTitle>Tarefas</CardTitle>
+          <Select value={filtroStatus} onValueChange={setFiltroStatus}>
+            <SelectTrigger className="w-32">
+              <SelectValue placeholder="Todos" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Todos</SelectItem>
+              <SelectItem value="pendente">Pendente</SelectItem>
+              <SelectItem value="em_andamento">Em andamento</SelectItem>
+              <SelectItem value="concluida">Concluída</SelectItem>
+              <SelectItem value="cancelada">Cancelada</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              Nova tarefa
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Nova tarefa</DialogTitle>
+            </DialogHeader>
+            <TarefaForm
+              projetoId={projetoId}
+              usuariosList={usuariosList}
+              onSubmit={(v: any) => mUpsert.mutate({ values: v })}
+              loading={mUpsert.isPending}
+            />
+          </DialogContent>
+        </Dialog>
+      </CardHeader>
+      <CardContent>
+        {q.isLoading ? (
+          <p>Carregando…</p>
+        ) : filtradas.length === 0 ? (
+          <p className="text-muted-foreground text-center py-8">Nenhuma tarefa nesta categoria</p>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Titulo</TableHead>
+                <TableHead>Responsável</TableHead>
+                <TableHead>Prioridade</TableHead>
+                <TableHead>Prazo</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtradas.map((t: any) => (
+                <TableRow key={t.id}>
+                  <TableCell className="font-medium">{t.titulo}</TableCell>
+                  <TableCell>{t.responsavel?.nome ?? "—"}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline">
+                      {prioridadeTarefaLabel(t.prioridade)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{t.data_prazo ? formatDate(t.data_prazo) : "—"}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{statusTarefaLabel(t.status)}</Badge>
+                  </TableCell>
+                  <TableCell className="flex gap-1">
+                    {t.status !== "concluida" && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => mConcluir.mutate(t.id)}
+                        disabled={mConcluir.isPending}
+                      >
+                        <CheckCircle2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <Button size="sm" variant="ghost" onClick={() => mDelete.mutate(t.id)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function TarefaForm({
+  projetoId,
+  usuariosList,
+  onSubmit,
+  loading,
+}: {
+  projetoId: string;
+  usuariosList: any[];
+  onSubmit: (data: any) => void;
+  loading: boolean;
+}) {
+  const [titulo, setTitulo] = useState("");
+  const [descricao, setDescricao] = useState("");
+  const [responsavelId, setResponsavelId] = useState("");
+  const [prioridade, setPrioridade] = useState("media");
+  const [dataPrazo, setDataPrazo] = useState("");
+
+  const handleSubmit = () => {
+    if (!titulo.trim()) return;
+    onSubmit({
+      projeto_id: projetoId,
+      titulo: titulo.trim(),
+      descricao: descricao.trim() || null,
+      responsavel_id: responsavelId || null,
+      prioridade,
+      status: "pendente",
+      data_prazo: dataPrazo || null,
+    });
+  };
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <Label>Título</Label>
+        <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} required />
+      </div>
+      <div>
+        <Label>Descrição</Label>
+        <Textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={3} />
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <Label>Responsável</Label>
+          <Select value={responsavelId} onValueChange={setResponsavelId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione" />
+            </SelectTrigger>
+            <SelectContent>
+              {usuariosList.map((u: any) => (
+                <SelectItem key={u.id} value={u.id}>
+                  {u.nome}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label>Prioridade</Label>
+          <Select value={prioridade} onValueChange={setPrioridade}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="baixa">Baixa</SelectItem>
+              <SelectItem value="media">Média</SelectItem>
+              <SelectItem value="alta">Alta</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div>
+        <Label>Prazo</Label>
+        <Input type="date" value={dataPrazo} onChange={(e) => setDataPrazo(e.target.value)} />
+      </div>
+      <DialogFooter>
+        <Button onClick={handleSubmit} disabled={loading || !titulo.trim()}>
+          {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+          Salvar
+        </Button>
+      </DialogFooter>
+    </div>
+  );
+}
+
 function ProjetoDetail() {
   const { id } = useParams({ from: "/_authenticated/projetos/$id" });
   const fn = useServerFn(getProjeto);
+  const fnUsuarios = useServerFn(listUsuarios);
+  const fnGetUser = useServerFn(getCurrentUser);
   const q = useQuery({ queryKey: ["projeto", id], queryFn: () => fn({ data: { id } }) });
+  const qUsuarios = useQuery({
+    queryKey: ["usuarios"],
+    queryFn: () => fnUsuarios({ data: {} }),
+  });
+  const qMe = useQuery({
+    queryKey: ["me"],
+    queryFn: () => fnGetUser(),
+  });
   const qc = useQueryClient();
+
+  const userId = qMe.data?.id ?? "";
 
   const upsert = useServerFn(upsertMarco);
   const marcar = useServerFn(marcarEntregue);
@@ -134,6 +536,8 @@ function ProjetoDetail() {
           <TabsTrigger value="documentos">Documentos</TabsTrigger>
           <TabsTrigger value="emails">E-mails</TabsTrigger>
           <TabsTrigger value="timeline">Linha do tempo</TabsTrigger>
+          <TabsTrigger value="discussao">Discussão</TabsTrigger>
+          <TabsTrigger value="tarefas">Tarefas</TabsTrigger>
           <TabsTrigger value="ia">Assistente IA</TabsTrigger>
         </TabsList>
 
@@ -230,6 +634,14 @@ function ProjetoDetail() {
           <TimelineSection projetoId={id} />
         </TabsContent>
 
+        <TabsContent value="discussao">
+          <DiscussaoSection projetoId={id} userId={userId} />
+        </TabsContent>
+
+        <TabsContent value="tarefas">
+          <TarefasSection projetoId={id} usuariosList={qUsuarios.data ?? []} />
+        </TabsContent>
+
         <TabsContent value="ia">
           <AiInsightsPanel projetoId={id} />
         </TabsContent>
@@ -265,16 +677,81 @@ function ProjetoDetail() {
 }
 
 function TimelineSection({ projetoId }: { projetoId: string }) {
-  const fn = useServerFn(getProjetoTimeline);
+  const fn = useServerFn(listInteracoesPaginado);
+  const fnToggleDestaque = useServerFn(toggleInteracaoDestaque);
+  const qc = useQueryClient();
+
+  const [filtroTipos, setFiltroTipos] = useState<string[]>([]);
+  const [pagina, setPagina] = useState(1);
+
   const q = useQuery({
-    queryKey: ["projeto-timeline", projetoId],
-    queryFn: () => fn({ data: { id: projetoId } }),
+    queryKey: ["projeto-timeline", projetoId, filtroTipos, pagina],
+    queryFn: () =>
+      fn({
+        data: {
+          projeto_id: projetoId,
+          tipos: filtroTipos.length > 0 ? filtroTipos : undefined,
+          cursor: pagina === 1 ? null : new Date(Date.now() - pagina * 20 * 60000).toISOString(),
+          pageSize: 20,
+        },
+      }),
   });
+
+  const mToggleDestaque = useMutation({
+    mutationFn: (id: string) => fnToggleDestaque({ data: { id } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["projeto-timeline", projetoId, filtroTipos, pagina] });
+    },
+  });
+
+  const tiposDisponiveis = [
+    "reuniao",
+    "email",
+    "ligacao",
+    "alteracao_cronograma",
+    "aditivo_contratual",
+    "nota",
+    "documento",
+    "email_encaminhado",
+    "tarefa",
+  ];
+
+  const handleToggleTipo = (tipo: string) => {
+    if (filtroTipos.includes(tipo)) {
+      setFiltroTipos(filtroTipos.filter((t) => t !== tipo));
+    } else {
+      setFiltroTipos([...filtroTipos, tipo]);
+    }
+    setPagina(1);
+  };
+
+  const items = q.data?.items ?? [];
+  const destacados = items.filter((i) => i.destacado);
+  const naoDestacados = items.filter((i) => !i.destacado);
+  const todasInteracoes = [...destacados, ...naoDestacados];
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Linha do tempo</CardTitle>
+        <Select>
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="Filtrar por tipo" />
+          </SelectTrigger>
+          <SelectContent>
+            {tiposDisponiveis.map((tipo) => (
+              <label key={tipo} className="flex items-center gap-2 p-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={filtroTipos.includes(tipo)}
+                  onChange={() => handleToggleTipo(tipo)}
+                  className="rounded"
+                />
+                <span className="text-sm">{tipoInteracaoLabel(tipo)}</span>
+              </label>
+            ))}
+          </SelectContent>
+        </Select>
       </CardHeader>
       <CardContent>
         {q.isLoading ? (
@@ -297,7 +774,7 @@ function TimelineSection({ projetoId }: { projetoId: string }) {
               Tentar novamente
             </Button>
           </div>
-        ) : (q.data ?? []).length === 0 ? (
+        ) : todasInteracoes.length === 0 ? (
           <div className="flex flex-col items-center justify-center text-center py-12 border border-dashed rounded-lg">
             <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3">
               <Inbox className="h-6 w-6 text-muted-foreground" />
@@ -309,36 +786,57 @@ function TimelineSection({ projetoId }: { projetoId: string }) {
             </p>
           </div>
         ) : (
-          <ol className="relative border-l ml-4 space-y-6">
-            {(q.data ?? []).map((i: any) => {
-              const st = interacaoStyle(i.tipo);
-              const Icon = st.icon;
-              return (
-                <li key={i.id} className="ml-6">
-                  <span
-                    className={cn(
-                      "absolute -left-[13px] flex h-6 w-6 items-center justify-center rounded-full ring-4 ring-background",
-                      st.dot,
-                    )}
-                  >
-                    <Icon className="h-3 w-3" />
-                  </span>
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                    <Badge variant="outline" className={cn("border-transparent", st.badge)}>
-                      {tipoInteracaoLabel(i.tipo)}
-                    </Badge>
-                    <span>{new Date(i.data_hora).toLocaleString("pt-BR")}</span>
-                    {i.autor?.nome ? (
-                      <span>· {i.autor.nome}</span>
-                    ) : (
-                      <span className="italic">· automático</span>
-                    )}
-                  </div>
-                  <p className="text-sm mt-1 whitespace-pre-wrap">{i.descricao}</p>
-                </li>
-              );
-            })}
-          </ol>
+          <>
+            <ol className="relative border-l ml-4 space-y-6">
+              {todasInteracoes.map((i: any) => {
+                const st = interacaoStyle(i.tipo);
+                const Icon = st.icon;
+                return (
+                  <li key={i.id} className="ml-6">
+                    <span
+                      className={cn(
+                        "absolute -left-[13px] flex h-6 w-6 items-center justify-center rounded-full ring-4 ring-background",
+                        st.dot,
+                      )}
+                    >
+                      <Icon className="h-3 w-3" />
+                    </span>
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mb-1">
+                      <Badge variant="outline" className={cn("border-transparent", st.badge)}>
+                        {tipoInteracaoLabel(i.tipo)}
+                      </Badge>
+                      <span>{new Date(i.data_hora).toLocaleString("pt-BR")}</span>
+                      {i.autor?.nome ? (
+                        <span>· {i.autor.nome}</span>
+                      ) : (
+                        <span className="italic">· automático</span>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-auto p-0"
+                        onClick={() => mToggleDestaque.mutate(i.id)}
+                      >
+                        {i.destacado ? "📌" : "📍"}
+                      </Button>
+                    </div>
+                    <p className="text-sm mt-1 whitespace-pre-wrap">{i.descricao}</p>
+                  </li>
+                );
+              })}
+            </ol>
+            {q.data?.hasMore && (
+              <div className="flex justify-center mt-6">
+                <Button
+                  variant="outline"
+                  onClick={() => setPagina(pagina + 1)}
+                  disabled={q.isLoading}
+                >
+                  Carregar mais
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </CardContent>
     </Card>

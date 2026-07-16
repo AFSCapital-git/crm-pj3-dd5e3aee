@@ -1,4 +1,4 @@
-import { formatBRL, formatDate, statusProjetoLabel, tipoMarcoLabel } from "@/lib/labels";
+import { formatBRL, formatDate, statusProjetoLabel, tipoMarcoLabel, prioridadeTarefaLabel } from "@/lib/labels";
 
 export interface EmailContent {
   subject: string;
@@ -68,6 +68,26 @@ export function projetoStatusEmail(params: {
         : ""
     }
     <p><a href="${params.urlProjeto}" style="background-color: #0f172a; color: #fff; padding: 10px 16px; border-radius: 4px; display: inline-block; margin-top: 12px;">Ver projeto no GestorFINEP</a></p>
+  `;
+  return { subject, html: baseLayout(subject, body) };
+}
+
+export function tarefaAtribuidaEmail(tarefa: any): EmailContent {
+  const subject = `Nova tarefa atribuída: ${tarefa.titulo}`;
+  const responsavelNome = tarefa.responsavel?.nome || "Usuário";
+  const dataPrazo = tarefa.data_prazo ? formatDate(tarefa.data_prazo) : "—";
+  const descricao = tarefa.descricao || "—";
+  const prioridade = prioridadeTarefaLabel(tarefa.prioridade);
+  const urlProjeto = `${process.env.APP_URL || ""}/projetos/${tarefa.projeto_id}`;
+
+  const body = `
+    <p>Olá, <strong>${responsavelNome}</strong>.</p>
+    <p>Uma nova tarefa foi atribuída a você.</p>
+    <p><strong>Título:</strong> ${tarefa.titulo}</p>
+    <p><strong>Descrição:</strong> ${descricao}</p>
+    <p><strong>Prioridade:</strong> ${prioridade}</p>
+    <p><strong>Prazo:</strong> ${dataPrazo}</p>
+    <p><a href="${urlProjeto}" style="background-color: #0f172a; color: #fff; padding: 10px 16px; border-radius: 4px; display: inline-block; margin-top: 12px;">Ver tarefa no GestorFINEP</a></p>
   `;
   return { subject, html: baseLayout(subject, body) };
 }

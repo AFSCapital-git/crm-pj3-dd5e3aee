@@ -148,6 +148,7 @@ export const listInteracoesPaginado = createServerFn({ method: "GET" })
         projeto_id: z.string().uuid(),
         cursor: z.string().nullable().optional(),
         pageSize: z.number().int().min(5).max(100).default(20),
+        tipos: z.array(z.string()).optional(),
       })
       .parse(d),
   )
@@ -157,6 +158,10 @@ export const listInteracoesPaginado = createServerFn({ method: "GET" })
       .select("*, autor:usuario_id(id,nome)")
       .eq("projeto_id", data.projeto_id)
       .order("data_hora", { ascending: false });
+
+    if (data.tipos?.length) {
+      query = query.in("tipo", data.tipos);
+    }
 
     if (data.cursor) {
       query = query.lt("data_hora", data.cursor);
@@ -170,4 +175,14 @@ export const listInteracoesPaginado = createServerFn({ method: "GET" })
     const nextCursor = items.length > 0 ? items[items.length - 1].data_hora : null;
 
     return { items, nextCursor, hasMore };
+  });
+
+export const toggleInteracaoDestaque = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ id: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await context.supabase.rpc("toggle_interacao_destaque", { _id: data.id });
+    return { ok: true };
   });

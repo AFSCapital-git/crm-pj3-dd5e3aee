@@ -96,3 +96,44 @@ export async function notificarProjetoStatus(projeto: {
     console.error("[email] erro ao enviar notificação de status de projeto", err);
   }
 }
+
+export async function notificarTarefaAtribuida(tarefa: {
+  id: string;
+  titulo: string;
+  descricao: string | null;
+  prioridade: string;
+  data_prazo: string | null;
+  projeto_id: string;
+  responsavel_id: string | null;
+  responsavel?: { id: string; nome: string } | null;
+}): Promise<void> {
+  try {
+    if (!tarefa.responsavel_id) return;
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: responsavel } = await supabaseAdmin
+      .from("usuarios_internos")
+      .select("nome,email")
+      .eq("id", tarefa.responsavel_id)
+      .maybeSingle();
+
+    if (!responsavel?.email) return;
+
+    const { sendEmail } = await import("@/lib/email.server");
+    const { tarefaAtribuidaEmail } = await import("@/lib/email-templates");
+
+    const content = tarefaAtribuidaEmail({
+      ...tarefa,
+      responsavel,
+    });
+
+    await sendEmail({
+      to: responsavel.email,
+      subject: content.subject,
+      html: content.html,
+    });
+  } catch (err) {
+    console.error("[email] erro ao enviar notificação de tarefa atribuída", err);
+  }
+}

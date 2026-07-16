@@ -72,9 +72,29 @@ const tipoInteracaoLabels: Record<string, string> = {
   aditivo_contratual: "Aditivo contratual",
   nota: "Nota",
   documento: "Documento",
+  tarefa: "Tarefa",
 };
 export function tipoInteracaoLabel(s: string) {
   return tipoInteracaoLabels[s] ?? s;
+}
+
+const statusTarefaLabels: Record<string, string> = {
+  pendente: "Pendente",
+  em_andamento: "Em andamento",
+  concluida: "Concluída",
+  cancelada: "Cancelada",
+};
+export function statusTarefaLabel(s: string) {
+  return statusTarefaLabels[s] ?? s;
+}
+
+const prioridadeTarefaLabels: Record<string, string> = {
+  baixa: "Baixa",
+  media: "Média",
+  alta: "Alta",
+};
+export function prioridadeTarefaLabel(s: string) {
+  return prioridadeTarefaLabels[s] ?? s;
 }
 
 export function formatBRL(v: number | string | null | undefined) {
