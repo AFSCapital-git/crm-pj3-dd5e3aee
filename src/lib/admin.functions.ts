@@ -50,7 +50,7 @@ export const criarConvite = createServerFn({ method: "POST" })
     z
       .object({
         email: z.string().trim().toLowerCase().email(),
-        papel: z.enum(["admin", "consultor"]),
+        papel: z.enum(["admin", "coordenador", "projetista"]),
         nome: z.string().trim().max(120).optional(),
       })
       .parse(d),
@@ -290,7 +290,7 @@ export const aceitarConvite = createServerFn({ method: "POST" })
 export const alterarPapel = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({ user_id: z.string().uuid(), papel: z.enum(["admin", "consultor"]) }).parse(d),
+    z.object({ user_id: z.string().uuid(), papel: z.enum(["admin", "coordenador", "projetista"]) }).parse(d),
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
