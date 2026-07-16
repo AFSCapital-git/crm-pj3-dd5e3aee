@@ -74,6 +74,51 @@ export type Database = {
           },
         ]
       }
+      discussao_mensagens: {
+        Row: {
+          autor_id: string | null
+          created_at: string
+          editado_em: string | null
+          id: string
+          mensagem: string
+          projeto_id: string
+          updated_at: string
+        }
+        Insert: {
+          autor_id?: string | null
+          created_at?: string
+          editado_em?: string | null
+          id?: string
+          mensagem: string
+          projeto_id: string
+          updated_at?: string
+        }
+        Update: {
+          autor_id?: string | null
+          created_at?: string
+          editado_em?: string | null
+          id?: string
+          mensagem?: string
+          projeto_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discussao_mensagens_autor_id_fkey"
+            columns: ["autor_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_internos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discussao_mensagens_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documentos: {
         Row: {
           criado_em: string
@@ -238,42 +283,63 @@ export type Database = {
       }
       empresas_clientes: {
         Row: {
+          bairro: string | null
+          cep: string | null
+          cidade: string | null
           cnpj: string
+          complemento: string | null
           consultor_responsavel_id: string | null
           contato_responsavel: string | null
           created_at: string
           email: string | null
+          estado: string | null
           id: string
+          numero: string | null
           porte: Database["public"]["Enums"]["porte_empresa"]
           razao_social: string
+          rua: string | null
           setor_atuacao: string | null
           status: Database["public"]["Enums"]["status_empresa"]
           telefone: string | null
           updated_at: string
         }
         Insert: {
+          bairro?: string | null
+          cep?: string | null
+          cidade?: string | null
           cnpj: string
+          complemento?: string | null
           consultor_responsavel_id?: string | null
           contato_responsavel?: string | null
           created_at?: string
           email?: string | null
+          estado?: string | null
           id?: string
+          numero?: string | null
           porte: Database["public"]["Enums"]["porte_empresa"]
           razao_social: string
+          rua?: string | null
           setor_atuacao?: string | null
           status?: Database["public"]["Enums"]["status_empresa"]
           telefone?: string | null
           updated_at?: string
         }
         Update: {
+          bairro?: string | null
+          cep?: string | null
+          cidade?: string | null
           cnpj?: string
+          complemento?: string | null
           consultor_responsavel_id?: string | null
           contato_responsavel?: string | null
           created_at?: string
           email?: string | null
+          estado?: string | null
           id?: string
+          numero?: string | null
           porte?: Database["public"]["Enums"]["porte_empresa"]
           razao_social?: string
+          rua?: string | null
           setor_atuacao?: string | null
           status?: Database["public"]["Enums"]["status_empresa"]
           telefone?: string | null
@@ -618,6 +684,73 @@ export type Database = {
           },
         ]
       }
+      tarefas_projeto: {
+        Row: {
+          concluida_em: string | null
+          created_at: string
+          data_prazo: string | null
+          descricao: string | null
+          id: string
+          origem_discussao_id: string | null
+          prioridade: Database["public"]["Enums"]["tarefa_prioridade"]
+          projeto_id: string
+          responsavel_id: string | null
+          status: Database["public"]["Enums"]["tarefa_status"]
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          concluida_em?: string | null
+          created_at?: string
+          data_prazo?: string | null
+          descricao?: string | null
+          id?: string
+          origem_discussao_id?: string | null
+          prioridade?: Database["public"]["Enums"]["tarefa_prioridade"]
+          projeto_id: string
+          responsavel_id?: string | null
+          status?: Database["public"]["Enums"]["tarefa_status"]
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          concluida_em?: string | null
+          created_at?: string
+          data_prazo?: string | null
+          descricao?: string | null
+          id?: string
+          origem_discussao_id?: string | null
+          prioridade?: Database["public"]["Enums"]["tarefa_prioridade"]
+          projeto_id?: string
+          responsavel_id?: string | null
+          status?: Database["public"]["Enums"]["tarefa_status"]
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tarefas_projeto_origem_discussao_id_fkey"
+            columns: ["origem_discussao_id"]
+            isOneToOne: false
+            referencedRelation: "discussao_mensagens"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tarefas_projeto_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tarefas_projeto_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_internos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -867,6 +1000,8 @@ export type Database = {
         | "em_prestacao_contas"
         | "encerrado"
         | "reprovado"
+      tarefa_prioridade: "baixa" | "media" | "alta"
+      tarefa_status: "pendente" | "em_andamento" | "concluida" | "cancelada"
       tipo_documento:
         | "material"
         | "contrato"
@@ -1036,6 +1171,8 @@ export const Constants = {
         "encerrado",
         "reprovado",
       ],
+      tarefa_prioridade: ["baixa", "media", "alta"],
+      tarefa_status: ["pendente", "em_andamento", "concluida", "cancelada"],
       tipo_documento: ["material", "contrato", "aditivo", "relatorio", "outro"],
       tipo_insight_ia: ["alerta_risco", "sugestao", "rascunho_relatorio"],
       tipo_interacao: [
